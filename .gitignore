@@ -5,6 +5,6 @@ dist
 es
 coverage
 .npmignore
-file_server/files/js 
-file_server/files/contracts
+server/static/js 
+server/static/contracts
 package-lock.json
