@@ -1,4 +1,4 @@
 import React from 'react';
 
 
-export default () => <i>test 1</i>
+export default () => <i>test 2</i>
