@@ -9,8 +9,11 @@
     "build:dev": "npm run build:globals && WEBPACK_CONFIG_TYPE=dev webpack --config ./compiler/webpack.config.js",
     "build:prod": "NODE_ENV=production npm run build:globals && NODE_ENV=production WEBPACK_CONFIG_TYPE=prod webpack --config ./compiler/webpack.config.js",
     "build:hot": "WEBPACK_CONFIG_TYPE=hot webpack --config ./compiler/webpack.config.js",
-    "start": "npm-run-all --parallel server build:dev",
-    "start:hot": "WEBPACK_CONFIG_TYPE=hot npm-run-all --parallel server build:hot"
+    "client": "npm-run-all --parallel server build:dev",
+    "client:hot": "WEBPACK_CONFIG_TYPE=hot npm-run-all --parallel server build:hot",
+    "deploy": "truffle migrate --reset && node ./utils/postdeploy.js",
+    "console": "truffle console",
+    "test": "truffle test"
   },
   "repository": {
     "type": "git",
