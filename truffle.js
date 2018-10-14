@@ -1,8 +1,12 @@
+require('dotenv').config()
+
+console.log(process.env)
+
 module.exports = {
   networks: {
     development: {
-      host: "192.168.4.102",
-      port: 7545,
+      host: process.env.HOST_RPC,
+      port: Number(process.env.PORT_RPC),
       network_id: "*" // Match any network id
     }
   }

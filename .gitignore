@@ -8,3 +8,4 @@ coverage
 server/static/js 
 server/static/contracts
 package-lock.json
+.env
