@@ -1,11 +1,11 @@
-module.exports = async (fn, message) => {
+module.exports = async (type, fn, message) => {
     let i;
     try {
-        await fn();
+        let y = await fn();
         i = true;
     } catch(e) {
         i = false;
     }
 
-    assert.equal(i, true, message)
+    assert.equal(i, !!type, message)
 }
