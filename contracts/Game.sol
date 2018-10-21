@@ -8,6 +8,8 @@ contract Game is Owned {
 	address public player0; 
 	bool public ready; 
 	bool public next; 
+	bool public end;
+	bool public winner;
 	
 	enum FieldStatus { FieldEmpty, FieldX, Field0 }
 	event StartGame(address playerX, address player0, bool first );

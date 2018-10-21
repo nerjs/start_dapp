@@ -133,4 +133,75 @@ contract('Game', accounts => {
 
     })
 
+    it('Игровой процесс. Определение победителя', async () => {
+        const px = accounts[1],
+            p0 = accounts[2];
+
+        let prev;
+
+        const checkWinner = async (n, s, g, type, _p) => {
+            const r = await Promise.all([
+                g.end(),
+                g.winner(),
+                g.playerX(),
+                g.player0()
+            ])
+
+            const p = r[1]? r[2] : r[3];
+
+            assert.equal(r[0], type, `Ошибочный результат. [Игра:${n}; Ход:${s}]` )
+
+            if (r[0]) assert.equal(p, _p, `Не тот победитель. [Игра:${n}; Ход:${s}]`)
+        }
+
+        const game = await Game.new(px, p0, true);
+        await game.confirmGame({ from: p0 })
+
+        await game.step(1, { from: px })
+        await checkWinner(1, 1, game, false, px)
+        await game.step(9, { from: p0 })
+        await checkWinner(1, 2, game, false, p0)
+        await game.step(2, { from: px })
+        await checkWinner(1, 3, game, false, px)
+        await game.step(5, { from: p0 })
+        await checkWinner(1, 4, game, false, p0)
+        await game.step(3, { from: px })
+        await checkWinner(1, 5, game, true, px)
+
+
+
+        
+        const game2 = await Game.new(px, p0, true);
+        await game2.confirmGame({ from: p0 })
+
+        await game2.step(1, { from: px })
+        await checkWinner(2, 1, game2, false, px)
+        await game2.step(2, { from: p0 })
+        await checkWinner(2, 2, game2, false, p0)
+        await game2.step(9, { from: px })
+        await checkWinner(2, 3, game2, false, px)
+        await game2.step(5, { from: p0 })
+        await checkWinner(2, 4, game2, false, p0)
+        await game2.step(7, { from: px })
+        await checkWinner(2, 5, game2, false, px)
+        await game2.step(8, { from: p0 })
+        await checkWinner(2, 6, game2, true, p0)
+
+
+        
+        const game3 = await Game.new(px, p0, true);
+        await game3.confirmGame({ from: p0 })
+
+        await game3.step(5, { from: px })
+        await checkWinner(3, 1, game3, false, px)
+        await game3.step(6, { from: p0 })
+        await checkWinner(3, 2, game3, false, p0)
+        await game3.step(9, { from: px })
+        await checkWinner(3, 3, game3, false, px)
+        await game3.step(8, { from: p0 })
+        await checkWinner(3, 4, game3, false, p0)
+        await game3.step(1, { from: px })
+        await checkWinner(3, 5, game3, true, px)
+    })
+
 })
