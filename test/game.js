@@ -71,7 +71,7 @@ contract('Game', accounts => {
 
 
         assert.isArray(fields, 'Значение fields[getFields()] не массив');
-        assert.equal(fields.length, 9, 'Длинна массива fields должна быть равна 9')
+        assert.equal(fields.length, 10, 'Длинна массива fields должна быть равна 10')
         fields.forEach( (f, i) => {
             assert.isFunction(f.toNumber, `Тип поля fields[${i}] не является числом(BigNumber)`);
             assert.equal(f.toNumber(), 0, `Значение поля fields[${i}] должно быть 0`)
@@ -80,13 +80,57 @@ contract('Game', accounts => {
     })
 
 
-    it('Игровой процесс. Проверка ошибок.', async () => {
-        const game = await Game.new(accounts[1], 0, true)
-        const player2 = await game.player0();
+    it('Игровой процесс. Проверка ошибок', async () => {
+        const game = await Game.new(accounts[1], accounts[2], true)
         
+        await et(false, ()=>game.confirmGame({ from: accounts[1]}),'Ошибка при подтверждении старта игры')
+        await et(true, ()=>game.confirmGame({ from: accounts[2]}),'Отсутствие ошибки при подтверждении старта игры')
+
+        await et(false, ()=>game.step(3,{ from: accounts[3] }), 'Акк, отличный от игроков')
+        await et(false, ()=>game.step(10, { from: accounts[1] }), 'Переданное число больше чем необходимо')
+        await et(false, ()=>game.step(0, { from: accounts[1] }), 'Переданное число меньше чем необходимо')
+
+        await et(false, ()=>game.step(3, { from: accounts[2]}),'Ход вне очереди [1]')
+        await et(true, ()=>game.step(3, { from: accounts[1]}),'Ход согласно очереди [1]')
+
+        await et(false, ()=>game.step(3,{ from: accounts[2] }), 'Повторная передача одного и того же параметра')
+
+        await et(false, ()=>game.step(4, { from: accounts[1]}),'Ход вне очереди [2]')
+        await et(true, ()=>game.step(4, { from: accounts[2]}),'Ход согласно очереди [2]')
 
 
-        console.log(player2)
+    })
+
+
+    it('Игровой процесс. Проверка результатов', async () => {
+        const px = accounts[1],
+            p0 = accounts[2];
+
+        let prev;
+
+
+        const game = await Game.new(px, p0, true);
+        await game.confirmGame({ from: p0 })
+        
+        prev = await game.fields(2);
+        assert.equal(prev.toNumber(), 0, 'Пустое поле перед ходом')
+        await game.step(2, { from: px});
+        prev = await game.fields(2);
+        assert.equal(prev.toNumber(), 1, 'Подтверждение первого хода')
+
+        prev = await game.fields(5);
+        assert.equal(prev.toNumber(), 0, 'Пустое поле перед ходом')
+        await game.step(5, { from: p0});
+        prev = await game.fields(5);
+        assert.equal(prev.toNumber(), 2, 'Подтверждение второго хода')
+
+        prev = await game.fields(4);
+        assert.equal(prev.toNumber(), 0, 'Пустое поле перед ходом')
+        await game.step(4, { from: px});
+        prev = await game.fields(4);
+        assert.equal(prev.toNumber(), 1, 'Подтверждение третьего хода')
+
+
     })
 
 })

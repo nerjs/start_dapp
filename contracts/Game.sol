@@ -13,7 +13,7 @@ contract Game is Owned {
 	event StartGame(address playerX, address player0, bool first );
 	event StepGame(address player, bool playerType, uint8 field);
 	
-	FieldStatus[9] public fields;
+	FieldStatus[10] public fields;
 
 
 	modifier onlyPlayers() {
@@ -58,7 +58,7 @@ contract Game is Owned {
 		ready = true; 
 	}
 
-	function getFields() view public returns(FieldStatus[9]) {
+	function getFields() view public returns(FieldStatus[10]) {
 		return fields;
 	}
 
@@ -66,7 +66,7 @@ contract Game is Owned {
 
 	function step(uint8 setField) public onlyNextPlayer {
 		require(ready);
-		require(setField <= 8);
+		require(setField > 0 && setField <= 9);
 		require(fields[setField] == FieldStatus.FieldEmpty);
 		if (msg.sender == playerX) {
 			fields[setField] = FieldStatus.FieldX;
