@@ -1,9 +1,9 @@
 pragma solidity ^0.4.24; 
 
-import "./Owned.sol"; 
+import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
 
 // TicTacToe
-contract Game is Owned {
+contract Game is Ownable {
 	address public playerX; 
 	address public player0; 
 	bool public ready; 
