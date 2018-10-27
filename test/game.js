@@ -1,5 +1,19 @@
 const et = require('../utils/error_tests')
 const { isEmptyAddress } = require('../utils/eth')
+const {
+    FIELD_STATUS_EMPTY,
+    FIELD_STATUS_X,
+    FIELD_STATUS_0,
+
+    GAME_STATUS_WAITING,
+    GAME_STATUS_CONFIRM_WAITING,
+    GAME_STATUS_STEP_WAITING,
+    GAME_STATUS_GAME_STARTED,
+    GAME_STATUS_REMOVE_FIRST_PLAYER,
+    GAME_STATUS_LONG_WAITING,
+    GAME_STATUS_CAPITULATE,
+    GAME_STATUS_WIN
+} = require('../utils/constants')
 
 const Game = artifacts.require('Game')
 
@@ -7,7 +21,7 @@ const Game = artifacts.require('Game')
 contract('Game', accounts => {
 
     it('Запуск контракта', async () => {
-        const game = await Game.new(accounts[1], accounts[2], true)
+        const game = await Game.new(accounts[1], accounts[2], true, 1000, 0)
 
         const playerX = await game.playerX();
         const player0 = await game.player0();
@@ -19,7 +33,7 @@ contract('Game', accounts => {
     })
 
     it('Старт игры', async () => {
-        let game = await Game.new(accounts[1], 0, true)
+        let game = await Game.new(accounts[1], 0, true, 1000, 0)
         let player1 = await game.playerX();
         let player2 = await game.player0();
         let ready = await game.ready();
@@ -30,7 +44,7 @@ contract('Game', accounts => {
 
 
 
-        game = await Game.new(accounts[1], 0, false)
+        game = await Game.new(accounts[1], 0, false, 1000, 0)
         player1 = await game.playerX();
         player2 = await game.player0();
         ready = await game.ready();
@@ -41,7 +55,7 @@ contract('Game', accounts => {
 
 
 
-        game = await Game.new(accounts[1], accounts[2], true)
+        game = await Game.new(accounts[1], accounts[2], true, 1000, 0)
         player1 = await game.playerX();
         player2 = await game.player0();
         ready = await game.ready();
@@ -50,7 +64,7 @@ contract('Game', accounts => {
         assert.equal(accounts[2], player2, 'Второго игрока ставит в неправильную позицию [address, address, true]')
 
 
-        game = await Game.new(accounts[1], accounts[2], false)
+        game = await Game.new(accounts[1], accounts[2], false, 1000, 0)
         player1 = await game.playerX();
         player2 = await game.player0();
         ready = await game.ready();
@@ -62,26 +76,31 @@ contract('Game', accounts => {
 
 
     it('Одинаковые адресса', async () => {
-        await et(false,()=>Game.new(accounts[2],accounts[2],false), 'Пропускает одинаковые адресса в конструкторе')
+        await et(false,()=>Game.new(accounts[2],accounts[2],false, 1000, 0), 'Пропускает одинаковые адресса в конструкторе')
     })
 
     it('Проверка полей при старте', async () => {
-        const game = await Game.new(accounts[1], accounts[2], true)
+        const game = await Game.new(accounts[1], accounts[2], true, 1500, accounts[3])
         const fields = await game.getFields();
-
+        const maxWait = await game.maxWait();
+        await game.confirmGame({ from: accounts[2] })
+        const st = parseInt(Date.now() / 10000);
+        const startTime = await game.startTime()
 
         assert.isArray(fields, 'Значение fields[getFields()] не массив');
         assert.equal(fields.length, 10, 'Длинна массива fields должна быть равна 10')
         fields.forEach( (f, i) => {
             assert.isFunction(f.toNumber, `Тип поля fields[${i}] не является числом(BigNumber)`);
-            assert.equal(f.toNumber(), 0, `Значение поля fields[${i}] должно быть 0`)
+            assert.equal(f.toNumber(), FIELD_STATUS_EMPTY, `Значение поля fields[${i}] должно быть 0`)
         })
 
+        assert.equal(maxWait.toNumber(), 1500, 'Максимальное ожидание в секундах')
+        assert.equal(st, parseInt(startTime.toNumber()/10), 'Начало игры')
     })
 
 
     it('Игровой процесс. Проверка ошибок', async () => {
-        const game = await Game.new(accounts[1], accounts[2], true)
+        const game = await Game.new(accounts[1], accounts[2], true, 1000, 0)
         
         await et(false, ()=>game.confirmGame({ from: accounts[1]}),'Ошибка при подтверждении старта игры')
         await et(true, ()=>game.confirmGame({ from: accounts[2]}),'Отсутствие ошибки при подтверждении старта игры')
@@ -109,26 +128,26 @@ contract('Game', accounts => {
         let prev;
 
 
-        const game = await Game.new(px, p0, true);
+        const game = await Game.new(px, p0, true, 1000, 0);
         await game.confirmGame({ from: p0 })
         
         prev = await game.fields(2);
-        assert.equal(prev.toNumber(), 0, 'Пустое поле перед ходом')
+        assert.equal(prev.toNumber(), FIELD_STATUS_EMPTY, 'Пустое поле перед ходом')
         await game.step(2, { from: px});
         prev = await game.fields(2);
-        assert.equal(prev.toNumber(), 1, 'Подтверждение первого хода')
+        assert.equal(prev.toNumber(), FIELD_STATUS_X, 'Подтверждение первого хода')
 
         prev = await game.fields(5);
-        assert.equal(prev.toNumber(), 0, 'Пустое поле перед ходом')
+        assert.equal(prev.toNumber(), FIELD_STATUS_EMPTY, 'Пустое поле перед ходом')
         await game.step(5, { from: p0});
         prev = await game.fields(5);
-        assert.equal(prev.toNumber(), 2, 'Подтверждение второго хода')
+        assert.equal(prev.toNumber(), FIELD_STATUS_0, 'Подтверждение второго хода')
 
         prev = await game.fields(4);
-        assert.equal(prev.toNumber(), 0, 'Пустое поле перед ходом')
+        assert.equal(prev.toNumber(), FIELD_STATUS_EMPTY, 'Пустое поле перед ходом')
         await game.step(4, { from: px});
         prev = await game.fields(4);
-        assert.equal(prev.toNumber(), 1, 'Подтверждение третьего хода')
+        assert.equal(prev.toNumber(), FIELD_STATUS_X, 'Подтверждение третьего хода')
 
 
     })
@@ -145,28 +164,32 @@ contract('Game', accounts => {
                 g.winner(),
                 g.playerX(),
                 g.player0(),
+                g.status(),
                 g.getWinner()
             ])
             let _st;
 
             const p = r[1]? r[2] : r[3];
 
-            assert.equal(r[0], r[4][0], 'Сравнение результата getWinner(end)')
+            assert.equal(r[0], r[5][0], 'Сравнение результата getWinner(end)')
 
             assert.equal(r[0], type, `Ошибочный результат. [Игра:${n}; Ход:${s}]` )
 
             if (r[0]) {
                 assert.equal(p, _p, `Не тот победитель. [Игра:${n}; Ход:${s}]`)
-                assert.equal(p, r[4][2], 'Сравнение результата getWinner(address _winner)')
+                assert.equal(p, r[5][2], 'Сравнение результата getWinner(address _winner)')
                 _st = r[1] ? 1 : 2;
+                assert.equal(r[4].toNumber(), GAME_STATUS_WIN, 'Правильный статус при победе')
             }  else {
                 _st = 0;
+                assert.equal(r[4].toNumber(), GAME_STATUS_GAME_STARTED, 'Правильный статус по игре')
             }
 
-            assert.equal(_st, r[4][1], 'Сравнение результата getWinner(status)')
+            assert.equal(_st, r[5][1], 'Сравнение результата getWinner(status)')
+            assert.equal(r[4].toNumber(), r[5][3].toNumber(), 'Сравнение результата getWinner(status)')
         }
 
-        const game = await Game.new(px, p0, true);
+        const game = await Game.new(px, p0, true, 1000, 0);
         await game.confirmGame({ from: p0 })
 
         await game.step(1, { from: px })
@@ -183,7 +206,7 @@ contract('Game', accounts => {
 
 
         
-        const game2 = await Game.new(px, p0, true);
+        const game2 = await Game.new(px, p0, true, 1000, 0);
         await game2.confirmGame({ from: p0 })
 
         await game2.step(1, { from: px })
@@ -201,7 +224,7 @@ contract('Game', accounts => {
 
 
         
-        const game3 = await Game.new(px, p0, true);
+        const game3 = await Game.new(px, p0, true, 1000, 0);
         await game3.confirmGame({ from: p0 })
 
         await game3.step(5, { from: px })
@@ -214,6 +237,11 @@ contract('Game', accounts => {
         await checkWinner(3, 4, game3, false, p0)
         await game3.step(1, { from: px })
         await checkWinner(3, 5, game3, true, px)
+    })
+
+    it('Проверка статусов', async () => {
+        const px = accounts[0],
+            p0 = accounts[1];
     })
 
 })

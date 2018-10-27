@@ -6,14 +6,33 @@ import '../lib/contracts/Owned.sol';
 contract Game is Owned {
 	address public playerX; 
 	address public player0; 
+	address private parentContract;
 	bool public ready; 
 	bool public next; 
 	bool public end;
 	bool public winner;
+	uint public startTime;
+	uint public endTime;
+	uint public lastStep;
+	uint public maxWait;
 	
 	enum FieldStatus { FieldEmpty, FieldX, Field0 }
+	enum GameResultStatus {
+		Waiting,           // [ 0 ] Ожидание второго игрока
+		ConfirmWaiting,    // [ 1 ] Ожидание подтверждения от второго игрока
+		StepWaiting,       // [ 2 ] Ожидание первого хода
+		GameStarted,       // [ 3 ] Игра началась
+		RemoveFirstPlayer, // [ 4 ] удалено первым игроком
+		LongWaiting,       // [ 5 ] слишком длинное ожидание
+		Capitulate,        // [ 6 ] игрок сдался
+		Win                // [ 7 ] победа
+	}
+
+	GameResultStatus public status;
+
 	event StartGame(address playerX, address player0, bool first );
 	event StepGame(address player, bool playerType, uint8 field);
+	event EndGame(address player, bool playerType, GameResultStatus status);
 	
 	FieldStatus[10] public fields;
 
@@ -28,7 +47,7 @@ contract Game is Owned {
 		_;
 	}
 
-	constructor(address _player1, address _player2, bool _first) public {
+	constructor(address _player1, address _player2, bool _first, uint _maxWait, address _parent) public {
 		require(_player1 != _player2); 
 		next = _first; 
 		if (next) {
@@ -39,15 +58,17 @@ contract Game is Owned {
 			playerX = _player2; 
 		}
 		
-
+		status = _player2 == address(0) ? GameResultStatus.Waiting : GameResultStatus.ConfirmWaiting;
+		maxWait = _maxWait;
+		parentContract = _parent;
 	}
 
-	function confirmGame()public {
-		require( ! ready); 
+	function confirmGame() public {
+		require( !ready); 
 		if (next && player0 == address(0)) {
 			require(msg.sender != playerX); 
 			player0 = msg.sender; 
-		} else if ( ! next && playerX == address(0)) {
+		} else if ( !next && playerX == address(0)) {
 			require(msg.sender != player0); 
 			playerX = msg.sender; 
 		} else if (next) {
@@ -56,6 +77,8 @@ contract Game is Owned {
 			require(msg.sender == playerX); 
 		}
 
+		status = GameResultStatus.StepWaiting;
+		startTime = block.timestamp;
 		emit StartGame(playerX, player0, next);
 		ready = true; 
 	}
@@ -70,6 +93,9 @@ contract Game is Owned {
 		require(ready);
 		require(setField > 0 && setField <= 9);
 		require(fields[setField] == FieldStatus.FieldEmpty);
+		if (status == GameResultStatus.StepWaiting) {
+			status = GameResultStatus.GameStarted;
+		}
 		if (msg.sender == playerX) {
 			fields[setField] = FieldStatus.FieldX;
 		} else {
@@ -115,24 +141,34 @@ contract Game is Owned {
 		}
 
 		if (rowLength == 3 || colLength == 3 || dWin) {
-			end = true;
-			winner = (tp == FieldStatus.FieldX);
+			win((tp == FieldStatus.FieldX), GameResultStatus.Win);
 		}
 
 	}
 
-	function getWinner() view public returns(bool, FieldStatus, address) {
+	function win(bool playerType, GameResultStatus _status) private {
+		end = true;
+		winner = playerType;
+		status = _status;
+		endTime = block.timestamp;
+		address playerWinner = playerType ? playerX : player0;
+		emit EndGame(playerWinner, playerType, _status);
+	}
+
+	function getWinner() view public returns(bool, FieldStatus, address, GameResultStatus) {
 		address _win;
-		FieldStatus status = FieldStatus.FieldEmpty;
+		FieldStatus fStatus = FieldStatus.FieldEmpty;
 		if (end) {
 			if (winner) {
 				_win = playerX;
-				status = FieldStatus.FieldX;
+				fStatus = FieldStatus.FieldX;
 			} else {
 				_win = player0;
-				status = FieldStatus.Field0;
+				fStatus = FieldStatus.Field0;
 			}
 		}
-		return (end, status, _win);
+		return (end, fStatus, _win, status);
 	}
+
+	
 }
