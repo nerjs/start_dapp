@@ -144,14 +144,26 @@ contract('Game', accounts => {
                 g.end(),
                 g.winner(),
                 g.playerX(),
-                g.player0()
+                g.player0(),
+                g.getWinner()
             ])
+            let _st;
 
             const p = r[1]? r[2] : r[3];
 
+            assert.equal(r[0], r[4][0], 'Сравнение результата getWinner(end)')
+
             assert.equal(r[0], type, `Ошибочный результат. [Игра:${n}; Ход:${s}]` )
 
-            if (r[0]) assert.equal(p, _p, `Не тот победитель. [Игра:${n}; Ход:${s}]`)
+            if (r[0]) {
+                assert.equal(p, _p, `Не тот победитель. [Игра:${n}; Ход:${s}]`)
+                assert.equal(p, r[4][2], 'Сравнение результата getWinner(address _winner)')
+                _st = r[1] ? 1 : 2;
+            }  else {
+                _st = 0;
+            }
+
+            assert.equal(_st, r[4][1], 'Сравнение результата getWinner(status)')
         }
 
         const game = await Game.new(px, p0, true);

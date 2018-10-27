@@ -77,10 +77,62 @@ contract Game is Owned {
 		}
 		next = !next;
 		emit StepGame(msg.sender, !next, setField);
-		checkWinner();
+		checkWinner(setField, fields[setField]);
 	}
 
-	function checkWinner() public {
+	function checkWinner(uint8 f, FieldStatus tp) public {
+		uint8 row = f/3;
+		uint8 rowLength;
+		uint8 col = f%3;
+		uint8 colLength;
+		bool canD = ((f%2) != 0 && fields[5] == tp) ;
+		bool dWin;
+		uint8 i;
+		uint8 t;
 
+
+		if (col > 0) {
+			row += 1;
+		} else {
+			col = 3;
+		}
+		for (i=1; i<4; i++) {
+			t = ((row - 1) * 3) + i;
+			if (fields[t] == tp) {
+				rowLength += 1;
+			}
+
+			t = ((i - 1) * 3) + col;
+			if (fields[t] == tp) {
+				colLength += 1;
+			}
+		}
+
+		if (canD) {
+			if ((fields[1] == tp && fields[9] == tp) || (fields[3] == tp && fields[7] == tp)) {
+				dWin = true;
+			} 
+		}
+
+		if (rowLength == 3 || colLength == 3 || dWin) {
+			end = true;
+			winner = (tp == FieldStatus.FieldX);
+		}
+
+	}
+
+	function getWinner() view public returns(bool, FieldStatus, address) {
+		address _win;
+		FieldStatus status = FieldStatus.FieldEmpty;
+		if (end) {
+			if (winner) {
+				_win = playerX;
+				status = FieldStatus.FieldX;
+			} else {
+				_win = player0;
+				status = FieldStatus.Field0;
+			}
+		}
+		return (end, status, _win);
 	}
 }
