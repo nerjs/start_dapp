@@ -13,7 +13,7 @@
     "client:hot": "WEBPACK_CONFIG_TYPE=hot npm-run-all --parallel server build:hot",
     "deploy": "truffle migrate --reset && node ./utils/postdeploy.js",
     "console": "truffle console",
-    "test": "truffle test"
+    "test": "NODE_ENV=test truffle test"
   },
   "repository": {
     "type": "git",
@@ -67,6 +67,7 @@
     "react-router-dom": "^4.3.1",
     "styled-components": "^3.3.3",
     "uglifyjs-webpack-plugin": "^1.2.0",
+    "web3": "^1.0.0-beta.36",
     "webpack": "^3.12.0",
     "yup": "^0.26.0"
   },
