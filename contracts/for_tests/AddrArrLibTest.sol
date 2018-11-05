@@ -35,4 +35,16 @@ contract AddrArrLibTest {
 	function splice(uint start, uint count) public {
 		list.splice(start, count);
 	}
+
+	function remove(address item) public {
+		list.remove(item);
+	}
+
+	function removeIndex(uint index) public {
+		list.removeIndex(index);
+	}
+
+	function insert(uint index, address[] items) public {
+		list.insert(index, items);
+	}
 }

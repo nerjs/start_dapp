@@ -3,6 +3,10 @@ pragma solidity ^0.4.24;
 
 library AddrArr {
 
+	/**
+	* indexOf(address)
+	* Позиция в списке либо uint(-1)
+	*/
 	function indexOf(address[] storage self, address item) view public returns(uint) {
 		for (uint i = 0; i < self.length; i++) {
 			if (self[i] == item) return i;
@@ -11,17 +15,32 @@ library AddrArr {
 	}
 
 
+	/**
+	* push(address) 
+	* добавление в конец списка
+	*/
 
 	// function push(address[] storage self, address item) public returns(address[]) {
 	// 	self[self.length] = item; 
 	// 	return self; 
 	// }
 
+	/**
+	* pop()
+	* Удаляет последний элемент массива
+	 */
 	function pop(address[] storage self) public returns(uint) {
 		self.length--;
 		return self.length;
 	} 
 
+	/**
+	* splice(uint start, uint count)
+	* Удаление со здвигом
+	* Удаляет элементы с сохранением порядка индексов
+	* Удаляет элементы с позиции start в количестве count.
+	* Сдвигает все оставшиеся и меняет длинну массива
+	 */
 	function splice(address[] storage self, uint start, uint count) public returns(uint) {
 		if (self.length < start) return self.length; 
 		if (self.length < count && start == 0) {
@@ -37,12 +56,82 @@ library AddrArr {
 		}
 
 		if ((start + count) > self.length) {
-			self.length = start + 1; 
+			self.length = start; 
 		} else {
 			self.length -= count; 
 		}
 
 		return self.length; 
+	}
+
+	/**
+	* remove(uint)
+	* Удаляет элемент по индексу без сохранения порядка индексов
+	* Заменяет Указанный элемент последним в списке и уменьшает длинну массива на 1
+	 */
+	function removeIndex(address[] storage self, uint index) public returns(uint) {
+		if (index >= self.length) return self.length;
+		self[index] = self[(self.length - 1)];
+		self.length -= 1;
+		return self.length;
+	}
+
+
+	/**
+	* remove(address)
+	* Удаляет элемент по значению без сохранения порядка индексов
+	* Заменяет Указанный элемент последним в списке и уменьшает длинну массива на 1
+	 */
+	function remove(address[] storage self, address item) public returns(uint) {
+		uint index = indexOf(self, item);
+		if (index == uint(-1)) return self.length;
+		return removeIndex(self, index);
+	}
+
+
+	/**
+	* insert(uint startIndex, address[])
+	* Вставка массива со здвигом
+	* Вставляет переданный массив в исходный начиная с указанной позиции.
+	* Сдвигает оставшиеся элементы в конец.
+	* self = [1, 2, 3, 4];
+	* self.insert(2, [5, 6, 7]);
+	* self == [1, 2, 5, 6, 7, 3, 4];
+	* Если стартовый индекс больше длинны массива - он считается равным длинне массива
+	 */
+	function insert(address[] storage self, uint startIndex, address[] items) public returns(uint) {
+		if (items.length == 0) return self.length;
+		if (startIndex > self.length) {
+			startIndex = self.length;
+		}
+
+		uint i;
+		address[] memory testAddr = new address[](self.length - startIndex);
+
+		self.length += items.length;
+		for (i = startIndex; i < self.length; i++) {
+			if (self[i] != address(0)) {
+				testAddr[(i - startIndex)] = self[i];
+			}
+
+			if(( i - startIndex) < items.length) {
+				self[i] = items[(i - startIndex)];
+			}
+		}
+
+		for (i = 0; i < testAddr.length; i++) {
+			self[(i + startIndex + items.length)] = testAddr[i];
+		}
+
+
+		// for (i = (self.length - 1); i >= startIndex; i--) {
+		// 	self[(i + items.length)] = self[i];
+		// }
+
+		// for (i = 0; i < items.length; i++) {
+		// 	self[(i + startIndex)] = items[i];
+		// }
+		return self.length;
 	}
 
 
