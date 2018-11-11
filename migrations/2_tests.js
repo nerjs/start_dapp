@@ -10,6 +10,7 @@ module.exports = (deployer, network, accounts) => {
 	if (process.env.NODE_ENV === 'test' && network === 'development') {
 		deployer.deploy(AddrArr);
 		deployer.link(AddrArr, AddrArrLibTest);
+		deployer.link(AddrArr, GameBaseTest);
 
 		deployer.deploy(OwnedTest)
 		deployer.deploy(SharedOwnerTest)

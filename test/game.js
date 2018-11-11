@@ -17,8 +17,9 @@ const {
 
 const Game = artifacts.require('Game')
 
+const contract1 = ()=>{}
 
-contract('Game', accounts => {
+contract1('Game', accounts => {
 
     it('Запуск контракта', async () => {
         const game = await Game.new(accounts[1], accounts[2], true, 1000, 0)

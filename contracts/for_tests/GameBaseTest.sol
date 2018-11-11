@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
-import "../helpers/GameBase.sol";
+import "../base/GameBase.sol";
+
 
 contract GameBaseTest is GameBase {
 	

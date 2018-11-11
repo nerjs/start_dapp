@@ -6,7 +6,6 @@ pragma solidity ^0.4.24;
  * functions, this simplifies the implementation of "user permissions".
  */
 
-
 contract Owned {
     address internal _owner;
 

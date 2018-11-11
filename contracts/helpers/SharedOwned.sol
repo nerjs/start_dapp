@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./Owned.sol";
 
+
 contract SharedOwned is Owned {
     address private _newOwner;
 
