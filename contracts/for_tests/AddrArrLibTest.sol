@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 import "../libs/AddrArr.sol";
 
+
 contract AddrArrLibTest {
 	using AddrArr for address[];
 
@@ -11,15 +12,15 @@ contract AddrArrLibTest {
 		list = _list;
 	}
 
-	function getList() view public returns(address[]) {
+	function getList() public view returns(address[]) {
 		return list;
 	}
 
-	function getCount() view public returns(uint) {
+	function getCount() public view returns(uint) {
 		return list.length;
 	}
 
-	function indexOf(address item) view public returns(bool, uint) {
+	function indexOf(address item) public view returns(bool, uint) {
 		uint res = list.indexOf(item);
 		return (res != uint(-1), res);
 	}
@@ -41,10 +42,29 @@ contract AddrArrLibTest {
 	}
 
 	function removeIndex(uint index) public {
-		list.removeIndex(index);
+		list.remove(index);
 	}
 
 	function insert(uint index, address[] items) public {
 		list.insert(index, items);
+	}
+
+	function insertItem(uint index, address item) public {
+		list.insert(index, item);
+	}
+
+	function replace(uint index, address item) public {
+		list.replace(index, item);
+	}
+	function replaceArr(uint start, address[] items) public {
+		list.replace(start, items);
+	}
+
+	function shift() public {
+		list.shift();
+	}
+
+	function unshift(address item) public {
+		list.unshift(item);
 	}
 }

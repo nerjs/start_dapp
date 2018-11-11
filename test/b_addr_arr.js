@@ -1,4 +1,5 @@
 require('colors')
+const lh = require('./helpers/list')
 const AddrArr = artifacts.require('AddrArrLibTest')
 
 
@@ -8,8 +9,8 @@ contract('AddrArrLibTest', accounts => {
 		const _list1 = await arr.getList();
 		await arr.splice(_list1.length - count, count * 2);
 		const list1 = await arr.getList();
-		const list2 = [],
-			start = list1.length - 3;
+		const list2 = [];
+
 		_list1.forEach(addr => {
 			if (list1.indexOf(addr) < 0) {
 				list2.push(addr)
@@ -36,7 +37,7 @@ contract('AddrArrLibTest', accounts => {
 
 
 		assert.equal(accounts.length, count.toNumber(), 'Количество аддресов совпадает');
-		assert.equal(accounts.toString(), list.toString(), 'Массивы совпадают')
+		lh.equal(accounts, list, 'Массивы совпадают')
 	})
 
 	it('Получение информации [indexOf(item)]', async () => {
@@ -44,7 +45,6 @@ contract('AddrArrLibTest', accounts => {
 		const list = await arr.getList();
 		const indexOf1 = await arr.indexOf(arr.address);
 		const indexOf2 = await arr.indexOf(list[3]);
-		
 		assert(!indexOf1[0], 'Аддреса контракта нет в списке');
 		assert(indexOf2[0], 'Необходимый аддресс найден в списке');
 		assert.equal(indexOf2[1].toNumber(), 3, 'Позиции необходимого аддресса совпадают');
@@ -71,7 +71,7 @@ contract('AddrArrLibTest', accounts => {
 		indexOf = await arr.indexOf(arr.address);
 		
 		assert.equal(list2.length - 1, list3.length, 'Длинна массива уменьшилась');
-		assert.equal(list3.indexOf(arr.address), -1, 'Удаленный аддресс отсутствует в списке');
+		lh.notInList(list3, arr.address, 'Удаленный аддресс отсутствует в списке');
 		assert(!indexOf[0], 'Удаленный аддресс не найден в списке [indexOf()]');
 	});
 
@@ -144,11 +144,24 @@ contract('AddrArrLibTest', accounts => {
 		assert.equal(list3.length, list2.length - 1, 'длинна массива уменьшилась [removeIndex()]');
 		assert.equal(list3.indexOf(removeAddr2), -1, 'Удаленный элемент не найден в списке [removeIndex()]');
 
-		await arr.push(removeAddr);
-		await arr.push(removeAddr2);
+		await updateList(arr);
 	});
 
-	it('Добавление со здвигом', async () => {
+	it('Добавление элемента со здвигом', async () => {
+		const arr = await AddrArr.deployed();
+		const list = await arr.getList();
+		const index = 4;
+
+		
+		await arr.insertItem(index, arr.address)
+		const list2 = await arr.getList();
+
+		assert.equal(list2.length, list.length + 1, 'Длинна массива увеличилась на 1');
+		lh.inList(list2, arr.address, 'insert item')
+		await updateList(arr);
+	});
+
+	it('Добавление массива со здвигом', async () => {
 		const arr = await AddrArr.deployed();
 		const [ list1, list2 ] = await parseList(arr, 4);
 		const start = parseInt(list1.length / 2)
@@ -167,6 +180,8 @@ contract('AddrArrLibTest', accounts => {
 				assert.equal(addr, list1[(i - list2.length)], `Элементы после вставляемого списка соответствут ожидаемым [index:${i}]`);
 			}
 		})
+
+
 
 
 		await updateList(arr);
@@ -190,7 +205,7 @@ contract('AddrArrLibTest', accounts => {
 			if (i >= start2 && i < start2 + list2.length) {
 				assert.equal(addr, list2[( i - start2 )], `1) Элементы внутри вставляемого списка соответствуют ожидаемым [index:${i}]`);
 			} else {
-				assert.equal(addr, list1[i], `1) Элементы вне вставляемого списка остались на месте [index:${i}]`);
+				assert.equal(addr, list3[i], `1) Элементы вне вставляемого списка остались на месте [index:${i}]`);
 			}
 		})
 
@@ -203,7 +218,7 @@ contract('AddrArrLibTest', accounts => {
 
 		assert.equal(list7.length, start3 + list6.length, 'Длинна массива, при вставке массива, соответствует необходимой длинне');
 
-		list4.forEach((addr, i) => {
+		list7.forEach((addr, i) => {
 			if (i >= start3) {
 				assert.equal(addr, list6[( i - start3 )], `2) Элементы внутри вставляемого списка соответствуют ожидаемым [index:${i}]`);
 			} else {
