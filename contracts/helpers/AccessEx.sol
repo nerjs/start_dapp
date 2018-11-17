@@ -1,10 +1,9 @@
 pragma solidity ^0.4.24;
 
-import "./Owned.sol"; 
 import "../libs/AddrArr.sol";
 
 
-contract AccessEx is Owned {
+contract AccessEx {
 	using AddrArr for *;
 	address[] private _exceptions;
 
@@ -16,13 +15,13 @@ contract AccessEx is Owned {
 		_;
 	}
 
-	function setAccess(address target) public onlyOwner {
+	function setAccess(address target) private {
 		require(target != address(0), "Empty address");
 		require(_exceptions.indexOf(target) != uint(-1), "Unnecessary changes");
 		_exceptions.push(target);
 	}
 
-	function removeAccess(address target) public onlyOwner {
+	function removeAccess(address target) private {
 		require(target != address(0), "Empty address");
 		require(_exceptions.indexOf(target) == uint(-1), "Unnecessary changes");
 		_exceptions.remove(target);
