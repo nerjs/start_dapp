@@ -6,7 +6,8 @@ coverage
 .npmignore
 server/static/js 
 server/static/contracts
-build
+build 
+./bin
 package-lock.json
 
 
