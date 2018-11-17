@@ -15,6 +15,46 @@ library AddrArr {
 	}
 
 
+	
+	/**
+	* @return Следующий аддресс относительно указанного или address(0)
+	 */
+	function next(address[] storage self, address item) public view returns(address) {
+		uint index = indexOf(self, item);
+		if (index == uint(-1) || index == (self.length - 1)) return address(0);
+		return self[(index + 1)];
+	}
+
+	
+	/**
+	* @return Следующий аддресс относительно указанного или первый в списке (если указан reload)
+	 */
+	function next(address[] storage self, address item, bool reload) public view returns(address) {
+		address n = next(self, item);
+		if (n != address(0)) return n;
+		return reload ? self[0] : n;
+	}
+
+	/**
+	* @return Предыдущий аддресс относительно указанного или address(0)
+	 */
+	function prev(address[] storage self, address item) public view returns(address) {
+		uint index = indexOf(self, item);
+		if (index == 0 || index == uint(-1)) return address(0);
+		return self[(index - 1)];
+	}
+
+	
+	/**
+	* @return Предыдущий аддресс относительно указанного или последний в списке (если указан reload)
+	 */
+	function prev(address[] storage self, address item, bool reload) public view returns(address) {
+		address p = prev(self, item);
+		if (p != address(0)) return p;
+		return reload ? self[(self.length - 1)] : p;
+	}
+
+
 	/**
 	* push(address) 
 	* добавление в конец списка
@@ -217,5 +257,6 @@ library AddrArr {
 
 		return insert(self, 0, item);
 	}
+
 
 }
