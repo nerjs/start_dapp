@@ -42,3 +42,22 @@ exports.equal = (list1, list2, message) => {
 		assert(list2.indexOf(item) >= 0, mess(`[${i}] Элементы не совпадают`,message));
 	})
 }
+
+exports.startData = async (contract, _arr) => {
+	isArray(_arr);
+	const arr = _arr.filter((d, i) => {
+		if (typeof d === 'string') {
+			assert(!!contract[d], `Свойство [ ${d} ] не присутствует в контракте`);
+			assert.equal(typeof contract[d], 'function', `Метод [ ${d} ] нне является функцией`);
+			return false;
+		} else if (typeof d === 'object' && d.i && d.r && typeof d.i === 'string') {
+			return true;
+		} 
+		throw new Error(`Неправильный формат: [index:${i}], [${JSON.stringify(d)}]`)
+	}).map( d => contract[d]())
+
+	const res = await Promise.all(arr);
+	arr.forEach((d, i) => {
+		assert.equal(res[i], d.r, `Ошибка соответствия. Метод ${d.i}. [index:${i}]`);
+	})
+}

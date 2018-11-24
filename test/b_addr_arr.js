@@ -1,5 +1,6 @@
 require('colors')
 const lh = require('./helpers/list')
+const address = require('./helpers/address')
 const AddrArr = artifacts.require('AddrArrLibTest')
 
 
@@ -249,5 +250,24 @@ contract('AddrArrLibTest', accounts => {
 		assert.equal(JSON.stringify(list3), JSON.stringify(list2), 'Порядок элементов после удаления соответствует');
 
 		await updateList(arr);
+	});
+
+	it('Получение следующего и предыдущего элемента prev/next', async () => {
+		const arr = await AddrArr.deployed();
+		const list = await arr.getList();
+		const last = list.length - 1;
+		const next1 = await arr.next(list[last])
+		const next2 = await arr.next(list[last - 1])
+		const next3 = await arr.nextReload(list[last], true)
+		const prev1 = await arr.prev(list[0])
+		const prev2 = await arr.prev(list[1])
+		const prev3 = await arr.prevReload(list[0], true)
+
+		assert.equal(next1, address.ADDRESS, 'Следующий от последнего слота - пустой слот');
+		assert.equal(next2, list[last], 'Следующий от предпоследнего слота - последний слот');
+		assert.equal(next3, list[0], 'Следующий от последнего слота с параметром reload - первый слот');
+		assert.equal(prev1, address.ADDRESS, 'Предидущий от первого слота - пустой слот');
+		assert.equal(prev2, list[0], 'Предидущий от второго слота - первый слот');
+		assert.equal(prev3, list[last], 'Предидущий от первого слота с параметром reload - последний слот');
 	});
 })

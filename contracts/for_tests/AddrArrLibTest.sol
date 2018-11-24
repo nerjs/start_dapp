@@ -67,4 +67,17 @@ contract AddrArrLibTest {
 	function unshift(address item) public {
 		list.unshift(item);
 	}
+
+	function next(address item) public view returns(address) {
+		return list.next(item);
+	}
+	function nextReload(address item, bool reload) public view returns(address) {
+		return list.next(item, reload);
+	}
+	function prev(address item) public view returns(address) {
+		return list.prev(item);
+	}
+	function prevReload(address item, bool reload) public view returns(address) {
+		return list.prev(item, reload);
+	}
 }
