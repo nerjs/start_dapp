@@ -56,6 +56,7 @@ contract GameBase {
 	event AddPlayer(address pl, PlayerMoveReason reason, uint cto);
 	event RemovePlayer(address pl, PlayerMoveReason reason);
 	event ConfirmPlayer(address pl);
+	event SetHost(address player);
 	event TransitionSpeed(address target, address next);
 	event StepGame(address target, address next);
 	event StartGame(uint time, address firstStep);
@@ -176,6 +177,12 @@ contract GameBase {
 			);
 
 		emit AddPlayer(pl, _reason, cto);
+	}
+
+	function setHost(address pl) internal {
+		infoPlayers[host].host = false;
+		infoPlayers[pl].host = true;
+		emit SetHost(pl);
 	}
 
 

@@ -39,4 +39,5 @@ const checkEvents = (tx, name, _count, args) => {
 }
 
 
-module.exports = checkEvents
+exports = module.exports = checkEvents
+exports.parseNumber = parseNumber

@@ -1,3 +1,6 @@
+const { parseNumber } = require('./check_events')
+
+
 
 const mess = exports.message = (txt, message) => `${txt}${message && '  [ ' + message + ' ]'}`
 
@@ -50,14 +53,19 @@ exports.startData = async (contract, _arr) => {
 			assert(!!contract[d], `Свойство [ ${d} ] не присутствует в контракте`);
 			assert.equal(typeof contract[d], 'function', `Метод [ ${d} ] нне является функцией`);
 			return false;
-		} else if (typeof d === 'object' && d.i && d.r && typeof d.i === 'string') {
+		} else if (typeof d === 'object' && ((d.n && typeof d.n === 'string') || (d.name && typeof d.name === 'string')) ) {
+			
 			return true;
 		} 
 		throw new Error(`Неправильный формат: [index:${i}], [${JSON.stringify(d)}]`)
-	}).map( d => contract[d]())
+	}).map( d => {
+		const pr = contract[(d.n || d.name)]()
+		pr._result = d.r === undefined ? d.result : d.r
+		return pr;
+	} )
 
 	const res = await Promise.all(arr);
 	arr.forEach((d, i) => {
-		assert.equal(res[i], d.r, `Ошибка соответствия. Метод ${d.i}. [index:${i}]`);
+		assert.equal(parseNumber(res[i]), d._result, `Ошибка соответствия. Метод ${d.n || d.name}. [index:${i}]`);
 	})
 }
