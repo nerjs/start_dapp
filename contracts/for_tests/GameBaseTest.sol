@@ -4,9 +4,20 @@ import "../base/GameBase.sol";
 
 
 contract GameBaseTest is GameBase {
+	uint private __hostModifTest;
+
+	function onlyHostTest() public onlyHost {
+		__hostModifTest = now;
+	}
+
+	function setInfoDataTest(uint _timeOut, uint _confirmTimeOut, uint _maxPlayers) public {
+		setInfoData(_timeOut, _confirmTimeOut, _maxPlayers);
+	}
+
 	function setStatusGame(uint status) public {
 		statusGame = GameStatus(status);
 	}
+
 
 	function addPlayerTest(address pl, PlayerMoveReason _reason) public {
 		addPlayer(pl, _reason);
@@ -22,15 +33,15 @@ contract GameBaseTest is GameBase {
 	function innerStepTest(address pl, address plNext) public {
 		innerStep(pl, plNext);
 	}
+	function outerStepTest() public {
+		outerStep();
+	}
 	function outerStepTest(address pl) public {
 		outerStep(pl);
 	}
+	
 	function setHostTest(address pl) public {
 		setHost(pl);
-	}
-	
-	function outerStepTest() public {
-		outerStep();
 	}
 
 	function startGameTest(address firstStep) public {

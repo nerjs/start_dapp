@@ -7,8 +7,8 @@ contract GameBase {
 	using AddrArr for *;
 
 	/**
-	 *   Статус игрока внутри игрового процесса
-	 */
+	* @title Статус игрока внутри игрового процесса
+	*/
 	enum PlayerStatus {
 		Empty,         // [ 0 ] Пустой слот
 		NotConfirmed,  // [ 1 ] Не подтвердил участие.
@@ -126,6 +126,7 @@ contract GameBase {
 	}
 
 
+
 	function checkPlayerStep() public onlyStarted returns(bool) {
 		if (endpointTime < now) return true;
 		address prev = nextStepPlayer;
@@ -160,6 +161,11 @@ contract GameBase {
 
 	} 
 	
+	function setInfoData(uint _timeOut, uint _confirmTimeOut, uint _maxPlayers) internal onlyNotStarted {
+		timeOut = _timeOut;
+		confirmTimeOut = _confirmTimeOut;
+		maxPlayers = _maxPlayers;
+	}
 
 	function addPlayer(address pl, PlayerMoveReason _reason) internal onlyNotStarted {
 		require(statusGame != GameStatus.Started && statusGame != GameStatus.Ended, "Нельзя добавлять гроков после начала игры");
@@ -179,9 +185,10 @@ contract GameBase {
 		emit AddPlayer(pl, _reason, cto);
 	}
 
-	function setHost(address pl) internal {
+	function setHost(address pl) internal onlyPlayerFor(pl, false) {
 		infoPlayers[host].host = false;
 		infoPlayers[pl].host = true;
+		host = pl;
 		emit SetHost(pl);
 	}
 

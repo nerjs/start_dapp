@@ -1,8 +1,8 @@
 const checkOwned = require('./custom/owned')
-const et = require('../utils/error_tests')
+const et = require('./helpers/error_tests')
 const address = require('./helpers/address')
 const list = require('./helpers/list')
-const { PlayerInfo } = require('./helpers/game')
+const { PlayerInfo, PlayerMoveReason, GameStatus } = require('./helpers/game')
 
 
 const GameBase = artifacts.require('GameBaseTest')
@@ -24,18 +24,35 @@ contract('GameBase', accounts => {
 			{ n: 'nextStepPlayer', r: address.ADDRESS},
 			{ n: 'prevStepPlayer', r: address.ADDRESS},
 		])
+		let struct = await gameBase.infoPlayers(address.ADDRESS)
+		struct = PlayerInfo(struct)
+		const emptyStruct = new PlayerInfo(false, address.ADDRESS, 0, 0, 0, 0)
+		assert(struct.equal(emptyStruct), 'Пустая структура необходимого формата')
 	});
+
+	it('Добавление игроков', async () => {
+		const gameBase = await GameBase.deployed();
+
+	})
+
+	it('Удаление игроков', async () => {
+		const gameBase = await GameBase.deployed();
+
+	})
+
+	it('Проверка ходов', async () => {
+		const gameBase = await GameBase.deployed();
+
+	})
+
+	it('Проверка завершения игры', async () => {
+		const gameBase = await GameBase.deployed();
+
+	})
 	
 	it('Проверка доступности по статусу игры', async () => {
 		const gameBase = await GameBase.deployed();
-		const struct = await gameBase.infoPlayers(address.ADDRESS)
-		console.log(PlayerInfo(struct))
-		console.log(PlayerInfo(struct).toArray())
-		console.log(PlayerInfo(struct).toJSON())
-		const arr = PlayerInfo(struct).toArray();
-		console.log(PlayerInfo(struct).equal(PlayerInfo(arr)))
-		arr[2] = 1
-		console.log(PlayerInfo(struct).equal(PlayerInfo(arr)))
-		
+		await gameBase.setStatusGame(GameStatus('Started'))
+		await et(false, ()=>gameBase.outerStepTest(), '[ outerStep ] Недоступен до старта игры');
 	});
 })
