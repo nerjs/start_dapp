@@ -21,7 +21,7 @@ exports.inList = (list, item, message) => {
 exports.notInList = (list, item, message) => {
 	isArray(list, message)
 
-	assert(list.indexOf(item) < 0, mess('Элемент не должен присутствовать в массиве', message));
+	assert(list.indexOf(item) < 0, mess('Элемент не должен присутствовать в массиве ', message));
 }
 
 

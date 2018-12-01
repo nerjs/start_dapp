@@ -19,6 +19,10 @@ contract GameBaseTest is GameBase {
 	}
 
 
+	function getPlayersList() public view returns(address[]) {
+		return listPlayers;
+	}
+
 	function addPlayerTest(address pl, PlayerMoveReason _reason) public {
 		addPlayer(pl, _reason);
 	}

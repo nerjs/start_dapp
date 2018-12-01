@@ -2,6 +2,8 @@ const checkOwned = require('./custom/owned')
 const et = require('./helpers/error_tests')
 const address = require('./helpers/address')
 const list = require('./helpers/list')
+const checkEvents = require('./helpers/check_events')
+const { sleep } = require('./helpers/time')
 const { PlayerInfo, PlayerMoveReason, GameStatus } = require('./helpers/game')
 
 
@@ -28,16 +30,247 @@ contract('GameBase', accounts => {
 		struct = PlayerInfo(struct)
 		const emptyStruct = new PlayerInfo(false, address.ADDRESS, 0, 0, 0, 0)
 		assert(struct.equal(emptyStruct), 'Пустая структура необходимого формата')
+		
+		let t, ct, mp, t1, ct1, mp1;
+		t = await gameBase.timeOut()
+		ct = await gameBase.confirmTimeOut()
+		mp = await gameBase.maxPlayers()
+		await gameBase.setInfoDataTest(t.toNumber() + 10, ct.toNumber() + 10, mp.toNumber() + 10)
+		t1 = await gameBase.timeOut()
+		ct1 = await gameBase.confirmTimeOut()
+		mp1 = await gameBase.maxPlayers()
+		assert.equal(t1.toNumber(), t.toNumber() + 10, 'Изменение таймаута задержки перед ходами');
+		assert.equal(ct1.toNumber(), ct.toNumber() + 10, 'Изменение таймаута задержки перед подтверждением');
+		assert.equal(mp1.toNumber(), mp.toNumber() + 10, 'Изменение тМаксимального колисества игроков');
+		await gameBase.setInfoDataTest(t.toNumber(), ct.toNumber(), mp.toNumber())
 	});
 
 	it('Добавление игроков', async () => {
 		const gameBase = await GameBase.deployed();
+		let pls, pl, tx;
+		pls = await gameBase.getPlayersList();
+		list.isArray(pls, 'start playerList()')
+		assert.equal(pls.length, 0, 'Нет игроков при старте');
 
+		await gameBase.setInfoDataTest(10,10,3);
+		await gameBase.setStatusGame(GameStatus('Started'))
+		await et(false, () => gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')), 'Нельзя добавлять гроков после начала игры')
+
+		await gameBase.setStatusGame(GameStatus('Waiting'))
+		tx = await et(true, () => gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')), 'можно добавлять игроков после начала игры')
+
+		pls = await gameBase.getPlayersList();
+		list.inList(pls, accounts[0], 'first addPlayer');
+		pl = await gameBase.infoPlayers(accounts[0])
+		pl = PlayerInfo(pl)
+		assert.equal(pl.host, false, 'Значение host у игрока');
+		assert.equal(pl.addr, accounts[0], 'Значение адреса у игрока');
+		assert.equal(pl.steps, 0, 'Значение steps у игрока');
+		assert.equal(pl.status, 'NotConfirmed', 'Значение status у игрока');
+		assert.equal(pl.reason, 'GameCreate', 'Значение reason у игрока');
+
+		checkEvents(tx,'AddPlayer',1,{
+			pl: accounts[0],
+			reason: PlayerMoveReason('GameCreate')
+		})
+
+		await gameBase.setHostTest(accounts[0])
+		pl = await gameBase.infoPlayers(accounts[0])
+		pl = PlayerInfo(pl)
+		assert.equal(pl.host, true, 'Значение host у игрока после setHost');
+
+		await gameBase.addPlayerTest(accounts[1], PlayerMoveReason('HostAdded'))
+		pl = await gameBase.infoPlayers(accounts[1])
+		pl = PlayerInfo(pl)
+		assert.equal(pl.reason, 'HostAdded', 'Значение reason у второго игрока');
+		pls = await gameBase.getPlayersList();
+		list.inList(pls, accounts[1], 'second addPlayer');
+
+		await et(false, () => gameBase.addPlayerTest(accounts[1], PlayerMoveReason('GameCreate')), 'Этот игрок уде добавлен')
+
+
+		await gameBase.addPlayerTest(accounts[2], PlayerMoveReason('SelfAdded'))
+		pl = await gameBase.infoPlayers(accounts[2])
+		pl = PlayerInfo(pl)
+		assert.equal(pl.reason, 'SelfAdded', 'Значение reason у третьего игрока');
+		pls = await gameBase.getPlayersList();
+		list.inList(pls, accounts[2], 'last addPlayer');
+
+		await et(false, () => gameBase.addPlayerTest(accounts[3], PlayerMoveReason('GameCreate')), 'Достигнут лимит игроков')
+		pl = await gameBase.infoPlayers(accounts[0])
+		
 	})
 
 	it('Удаление игроков', async () => {
 		const gameBase = await GameBase.deployed();
+		let pl, plx, tx;
+		plx = await gameBase.getPlayersList();
+		assert.equal(plx.length, 3, 'Перед удалением все три АКК на месте');
+		list.notInList(plx, accounts[4], `${accounts[4]} не в списке`)
 
+		await et(false, ()=>gameBase.removePlayerTest(accounts[4], PlayerMoveReason('SelfRemoved')),'Нельзя удалить не добавленного пользователя')
+
+
+		list.inList(plx, accounts[0], `${accounts[0]} в списке`)
+		tx = await et(true, ()=>gameBase.removePlayerTest(accounts[0], PlayerMoveReason('SelfRemoved')),'Можно удалить добавленного пользователя')
+
+		plx = await gameBase.getPlayersList();
+		assert.equal(plx.length, 2, 'После первого удаления массив уменьшен');
+		list.notInList(plx, accounts[0], `${accounts[0]} не в списке`)
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[0],
+			reason: PlayerMoveReason('SelfRemoved')
+		})
+
+
+		list.inList(plx, accounts[1], `${accounts[1]} в списке`)
+		tx = await et(true, ()=>gameBase.removePlayerTest(accounts[1], PlayerMoveReason('SelfRemoved')),'Можно удалить добавленного пользователя')
+
+		plx = await gameBase.getPlayersList();
+		assert.equal(plx.length, 1, 'После второго удаления массив уменьшен');
+		list.notInList(plx, accounts[0], `${accounts[0]} не в списке`)
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[1],
+			reason: PlayerMoveReason('SelfRemoved')
+		})
+
+
+		list.inList(plx, accounts[2], `${accounts[2]} в списке`)
+		tx = await et(true, ()=>gameBase.removePlayerTest(accounts[2], PlayerMoveReason('SelfRemoved')),'Можно удалить добавленного пользователя')
+
+		plx = await gameBase.getPlayersList();
+		assert.equal(plx.length, 0, 'После третьего удаления массив уменьшен');
+		list.notInList(plx, accounts[2], `${accounts[2]} не в списке`)
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[2],
+			reason: PlayerMoveReason('SelfRemoved')
+		})
+	})
+
+	it('Подтверждение участия', async () => {
+		const gameBase = await GameBase.deployed();
+		let pl, tx;
+		await gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate'))
+
+		await et(false, ()=>gameBase.confirmPlayerTest(accounts[1]),'Нельзя подвердить не добавленного игрока')
+		tx = await et(true, ()=>gameBase.confirmPlayerTest(accounts[0]),'Можно подвердить добавленного игрока') 
+
+		checkEvents(tx, 'ConfirmPlayer', 1, {
+			pl: accounts[0]
+		});
+
+		await gameBase.removePlayerTest(accounts[0], PlayerMoveReason('SelfRemoved'))
+	})
+
+	it('Проверка допустимых интевалов при подтверждении', async () => {
+		const gameBase = await GameBase.deployed();
+		let plx, tx, t;
+
+		
+		await gameBase.setInfoDataTest(10,2,10);
+		await Promise.all([
+			gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')),
+			gameBase.addPlayerTest(accounts[1], PlayerMoveReason('GameCreate'))
+		])
+		plx = await gameBase.getPlayersList();
+		list.inList(plx,accounts[0])
+		list.inList(plx,accounts[1])
+		
+		
+		tx = await gameBase.addPlayerTest(accounts[2], PlayerMoveReason('GameCreate'))
+
+		checkEvents(tx, 'AddPlayer', 1)
+		checkEvents(tx, 'RemovePlayer', 0)
+		plx = await gameBase.getPlayersList();
+		list.inList(plx,accounts[0])
+		list.inList(plx,accounts[1])
+		list.inList(plx,accounts[2])
+		
+		await sleep(3000)
+		
+		
+		tx = await gameBase.addPlayerTest(accounts[3], PlayerMoveReason('GameCreate'))
+		
+		checkEvents(tx, 'AddPlayer', 1)
+		checkEvents(tx, 'RemovePlayer', 3)
+		plx = await gameBase.getPlayersList();
+		
+		list.inList(plx,accounts[3])
+		list.notInList(plx,accounts[0])
+		list.notInList(plx,accounts[1])
+		list.notInList(plx,accounts[2])
+
+		await sleep(3000)
+
+		
+		tx = await gameBase.addPlayerTest(accounts[4], PlayerMoveReason('GameCreate'))
+		
+		checkEvents(tx, 'AddPlayer', 1, {
+			pl: accounts[4]
+		})
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[3],
+			reason: PlayerMoveReason('WaitTime')
+		})
+		plx = await gameBase.getPlayersList();
+		
+		list.inList(plx,accounts[4])
+		list.notInList(plx,accounts[3])
+
+
+		await sleep(3000)
+
+		
+		tx = await gameBase.checkPlayersGame()
+		
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[4],
+			reason: PlayerMoveReason('WaitTime')
+		})
+		plx = await gameBase.getPlayersList();
+		
+		assert.equal(plx.length, 0, 'пустой массив после истечения времени');
+		list.notInList(plx,accounts[4])
+
+		await gameBase.setInfoDataTest(10,5,10);
+		await gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate'))
+		await sleep(3000)
+		await gameBase.addPlayerTest(accounts[1], PlayerMoveReason('GameCreate'))
+		await sleep(2000)
+
+		tx = await gameBase.confirmPlayerTest(accounts[1]);
+
+
+		checkEvents(tx, 'ConfirmPlayer', 1, {
+			pl: accounts[1]
+		});
+
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[0],
+			reason: PlayerMoveReason('WaitTime')
+		})
+
+		await sleep(5000);
+		tx = await gameBase.checkPlayersGame()
+		
+		checkEvents(tx, 'RemovePlayer', 0);
+		plx = await gameBase.getPlayersList();
+		
+		list.inList(plx, accounts[1])
+
+		await gameBase.setInfoDataTest(10,2,10);
+
+		await gameBase.addPlayerTest(accounts[5], PlayerMoveReason('GameCreate'))
+		await sleep(2100)
+
+		tx = await gameBase.confirmPlayerTest(accounts[5]);
+
+		checkEvents(tx, 'ConfirmPlayer', 0);
+
+		checkEvents(tx, 'RemovePlayer', 1, {
+			pl: accounts[5],
+			reason: PlayerMoveReason('WaitTime')
+		})
 	})
 
 	it('Проверка ходов', async () => {

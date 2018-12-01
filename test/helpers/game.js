@@ -96,9 +96,8 @@ PlayerInfo.prototype.arrToObject = function(arr) {
 
 	res.confirmEndpoint = isNaN(Number(res.confirmEndpoint)) ? 0 : Number(res.confirmEndpoint)
 	res.steps = isNaN(Number(res.steps)) ? 0 : Number(res.steps);
-
-	if (typeof res.status != 'string' || exports.PlayerStatus(res.status) !== arr[4]) res.status = exports.PlayerStatus(0); 
-	if (typeof res.reason != 'string' || exports.PlayerMoveReason(res.reason) !== arr[5]) res.reason = exports.PlayerMoveReason(0); 
+	if (typeof res.status != 'string' || exports.PlayerStatus(res.status) !== parseNumber(arr[4])) res.status = exports.PlayerStatus(0); 
+	if (typeof res.reason != 'string' || exports.PlayerMoveReason(res.reason) !== parseNumber(arr[5])) res.reason = exports.PlayerMoveReason(0); 
 
 	return res;
 }

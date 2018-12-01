@@ -87,7 +87,7 @@ contract GameBase {
 	} 
 
 	modifier onlyPlayerFor(address pl, bool inGame) {
-		require(listPlayers.indexOf(pl) != uint(-1), "Действие разрешено только игрокам");
+		require(listPlayers.indexOf(pl) != uint(-1), "Действие разрешено только относительно игроков");
 		if (inGame) {
 			require(infoPlayers[pl].status == PlayerStatus.Waiting || infoPlayers[pl].status == PlayerStatus.Next, "Действие разрешено только активным игрокам");
 		}
@@ -125,6 +125,9 @@ contract GameBase {
 		_;
 	}
 
+	function inGame(address pl) public view returns(bool) {
+		return ((infoPlayers[pl].status != PlayerStatus.Waiting) && (listPlayers.indexOf(pl) != uint(-1)));
+	}
 
 
 	function checkPlayerStep() public onlyStarted returns(bool) {
@@ -136,20 +139,24 @@ contract GameBase {
 	}
 
 
-
 	function checkPlayersGame() public onlyNotStarted {
-		if (listPlayers.length < maxPlayers) {
-			statusGame = GameStatus.WaitingPlayers;
-			return;
-		}
-
 		bool hasNC;
-		for (uint i = 0; i < listPlayers.length; i++) {
+		address[] memory ra = new address[](listPlayers.length);
+		uint i;
+
+		for (i = 0; i < listPlayers.length; i++) {
 			if (infoPlayers[listPlayers[i]].status != PlayerStatus.NotConfirmed) continue;
 			if (infoPlayers[listPlayers[i]].confirmEndpoint > now) {
 				hasNC = true;
 			} else {
-				removePlayer(listPlayers[i], PlayerMoveReason.WaitTime);
+				ra[i] = listPlayers[i];
+			}
+		}
+
+		if (ra.length > 0) {
+			for (i = 0; i < ra.length; i++) {
+				if (ra[i] == address(0)) continue;
+				removePlayer(ra[i], PlayerMoveReason.WaitTime);
 			}
 		}
 
@@ -170,7 +177,7 @@ contract GameBase {
 	function addPlayer(address pl, PlayerMoveReason _reason) internal onlyNotStarted {
 		require(statusGame != GameStatus.Started && statusGame != GameStatus.Ended, "Нельзя добавлять гроков после начала игры");
 		require(infoPlayers[pl].status == PlayerStatus.Empty, "Этот игрок уде добавлен");
-		require(listPlayers.length >= (maxPlayers - 1), "Достигнут лимит игроков");
+		require(listPlayers.length < maxPlayers, "Достигнут лимит игроков");
 		listPlayers.push(pl);
 		uint cto = (now + confirmTimeOut);
 		infoPlayers[pl] = PlayerInfo(
@@ -181,7 +188,7 @@ contract GameBase {
 				PlayerStatus.NotConfirmed,
 				_reason
 			);
-
+		checkPlayersGame();
 		emit AddPlayer(pl, _reason, cto);
 	}
 
@@ -195,17 +202,16 @@ contract GameBase {
 
 	function confirmPlayer(address pl) internal onlyNotStarted onlyPlayerFor(pl, false) {
 		require(infoPlayers[pl].status == PlayerStatus.NotConfirmed, "Игрок не нуждается в подтверждении");
+		checkPlayersGame();
+		if (!inGame(pl)) return;
 		infoPlayers[pl].status = PlayerStatus.Waiting;
 		infoPlayers[pl].confirmEndpoint = 0;
-		checkPlayersGame();
 		emit ConfirmPlayer(pl);
 	}
 
 	function removePlayer(address pl, PlayerMoveReason reason) internal onlyNotStarted onlyPlayerFor(pl, false) {
-		require(infoPlayers[pl].status != PlayerStatus.Empty, "Этот игрок еще не добавлен");
 		listPlayers.remove(pl);
 		delete infoPlayers[pl];
-		checkPlayersGame();
 		emit RemovePlayer(pl, reason);
 	}
 

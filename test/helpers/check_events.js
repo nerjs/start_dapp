@@ -4,7 +4,7 @@ const parseNumber = n => typeof n === 'object' && n.toNumber ? n.toNumber() : n;
 const checkEvents = (tx, name, _count, args) => {
     const count = isNaN(Number(_count)) ? 1 : Number(_count);
     assert(Array.isArray(tx.logs), `[event:${name}] tx.logs mustbe Array`);
-    assert(tx.logs.length > 0, `[event:${name}] Событий не обнаружено`);
+    // assert(tx.logs.length > 0, `[event:${name}] Событий не обнаружено`);
 
     const arr = [];
 
