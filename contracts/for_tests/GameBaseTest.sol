@@ -37,7 +37,7 @@ contract GameBaseTest is GameBase {
 	function innerStepTest(address pl, address plNext) public {
 		innerStep(pl, plNext);
 	}
-	function outerStepTest() public {
+	function outerStepTestEmpty() public {
 		outerStep();
 	}
 	function outerStepTest(address pl) public {
@@ -47,12 +47,12 @@ contract GameBaseTest is GameBase {
 	function setHostTest(address pl) public {
 		setHost(pl);
 	}
+	function startGameTestEmpty() public {
+		startGame();
+	}
 
 	function startGameTest(address firstStep) public {
 		startGame(firstStep);
-	}
-	function startGameTest() public {
-		startGame();
 	}
 
 	function innerWinTest(address pl) public {

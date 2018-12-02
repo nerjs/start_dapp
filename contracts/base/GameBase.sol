@@ -58,8 +58,8 @@ contract GameBase {
 	event ConfirmPlayer(address pl);
 	event SetHost(address player);
 	event TransitionSpeed(address target, address next);
-	event StepGame(address target, address next);
 	event StartGame(uint time, address firstStep);
+	event StepGame(address target, address next);
 	event EndGame(uint time, address winner, uint playerSteps, uint steps);
 
 	
@@ -122,6 +122,10 @@ contract GameBase {
 	modifier onlyReady() {
 		require(statusGame == GameStatus.Waiting, "Действие возможно только в режиме ожидания");
 		require(listPlayers.length == maxPlayers, "Дествие возможно только при полном списке игроков");
+		for (uint i = 0; i < listPlayers.length; i++) {
+			require(infoPlayers[listPlayers[i]].status != PlayerStatus.Empty, "Пустой слот игрока");
+			require(infoPlayers[listPlayers[i]].status != PlayerStatus.NotConfirmed, "Игрок не подтвержден");
+		}
 		_;
 	}
 
@@ -188,7 +192,6 @@ contract GameBase {
 				PlayerStatus.NotConfirmed,
 				_reason
 			);
-		checkPlayersGame();
 		emit AddPlayer(pl, _reason, cto);
 	}
 
@@ -202,7 +205,7 @@ contract GameBase {
 
 	function confirmPlayer(address pl) internal onlyNotStarted onlyPlayerFor(pl, false) {
 		require(infoPlayers[pl].status == PlayerStatus.NotConfirmed, "Игрок не нуждается в подтверждении");
-		checkPlayersGame();
+		require(infoPlayers[pl].confirmEndpoint >= now, "Подтверждение невозможно. Истекло допустимое время подтверждения");
 		if (!inGame(pl)) return;
 		infoPlayers[pl].status = PlayerStatus.Waiting;
 		infoPlayers[pl].confirmEndpoint = 0;
@@ -216,8 +219,25 @@ contract GameBase {
 	}
 
 
+	function startGame(address firstStep) internal onlyReady onlyPlayerFor(firstStep, true) {
+		require(firstStep != address(0), "Первый игрок обязателен");
+		timeStartGame = now;
+		statusGame = GameStatus.Started;
+		nextStepPlayer = firstStep;
+		infoPlayers[firstStep].status = PlayerStatus.Next;
+		emit StartGame(now, firstStep);
+	}
+
+	function startGame() internal {
+		startGame(listPlayers[0]);
+	}
+
+
 	function innerStep(address pl, address plNext) internal onlyStarted onlyPlayerFor(pl, true) onlyPlayerFor(plNext, true) {
 		infoPlayers[pl].status = PlayerStatus.Waiting;
+		if (pl != nextStepPlayer) {
+			infoPlayers[nextStepPlayer].status = PlayerStatus.Waiting;
+		}
 		infoPlayers[pl].steps++;
 		prevStepPlayer = pl; 
 		nextStepPlayer = plNext; 
@@ -228,27 +248,13 @@ contract GameBase {
 
 	function outerStep(address pl) internal onlyStarted onlyPlayerFor(pl, true) {
 		if (!checkPlayerStep()) return;
-		address prev = nextStepPlayer;
-		nextStepPlayer = pl;
-		nextStepPlayer = listPlayers.next(prev, true);
-		innerStep(prev, nextStepPlayer);
+		prevStepPlayer = pl;
+		nextStepPlayer = listPlayers.next(pl, true);
+		innerStep(prevStepPlayer, nextStepPlayer);
 	}
 
 	function outerStep() internal {
-		outerStep(listPlayers.next(nextStepPlayer, true));
-	}
-
-
-	function startGame(address firstStep) internal onlyReady onlyPlayerFor(firstStep, true) {
-		require(firstStep != address(0), "Первый игрок обязателен");
-		timeStartGame = now;
-		statusGame = GameStatus.Started;
-		nextStepPlayer = firstStep;
-		emit StartGame(now, firstStep);
-	}
-
-	function startGame() internal {
-		startGame(listPlayers[0]);
+		outerStep(nextStepPlayer);
 	}
 
 	function innerWin(address pl) internal onlyStarted  onlyPlayerFor(pl, true) {

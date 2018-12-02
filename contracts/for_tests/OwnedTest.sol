@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 import "../helpers/Owned.sol";
 
+
 contract OwnedTest is Owned {
     uint private _test;
 

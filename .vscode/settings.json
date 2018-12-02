@@ -1,0 +1,31 @@
+{
+    "git.autofetch": true,
+    "editor.minimap.enabled": true,
+	"window.zoomLevel": 0,
+    "solidity.enabledSolium": false,
+    "solidity.enabledAsYouTypeCompilationErrorCheck": false,
+	"solidity.linter": "solhint",
+	"solidity.solhintRules": {
+		"avoid-throw": false,
+		"avoid-suicide": "error",
+		"avoid-sha3": "warn",
+		"indent": [0, 4],
+		"no-mix-tabs-and-spaces": false,
+		"separate-by-one-line-in-contract": false,
+		"space-after-comma": false,
+		"max-line-length": 150,
+		"compiler-fixed": false,
+		"code-complexity": ["error", 30],
+		"not-rely-on-time": false,
+		"no-simple-event-func-name": false
+	},
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": false,
+
+	"[solidity]": {
+        "editor.detectIndentation": true,
+        "editor.insertSpaces": false,
+		"editor.tabSize": 4,
+		"editor.autoIndent": true
+	}
+}

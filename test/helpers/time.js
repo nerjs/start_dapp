@@ -1,6 +1,6 @@
 
 const toSec = exports.toSec = t => Math.round(t/1000)
-const equal = exports.equal = (f, s, sp) => {
+const equal = exports.equalTime = (f, s, sp) => {
 	if (f === s) return true;
 	const l = Math.abs(s - f);
 	return (l <= sp);

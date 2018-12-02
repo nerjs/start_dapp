@@ -20,7 +20,7 @@ exports._PlayerStatus = {
 	6: 'Loss',          // [ 6 ] Проиграл
 	7: 'Win'            // [ 7 ] Победил
 }
-exports.PlayerStatus = n => exports._PlayerStatus[n]
+exports.PlayerStatus = n => exports._PlayerStatus[parseNumber(n)]
 
 
 exports._PlayerMoveReason = {
@@ -42,7 +42,7 @@ exports._PlayerMoveReason = {
 	7: 'BasisPlayers'  // [ 7 ] Удален решением игроков
 }
 
-exports.PlayerMoveReason = n => exports._PlayerMoveReason[n] 
+exports.PlayerMoveReason = n => exports._PlayerMoveReason[parseNumber(n)] 
 
 
 exports._GameStatus = {
@@ -56,7 +56,7 @@ exports._GameStatus = {
 	3: 'Ended'            // [ 3 ] Игра закончилась
 }
 
-exports.GameStatus = n => exports._GameStatus[n]
+exports.GameStatus = n => exports._GameStatus[parseNumber(n)]
 
 
 
