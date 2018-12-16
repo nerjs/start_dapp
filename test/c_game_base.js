@@ -14,7 +14,7 @@ const GameBase = artifacts.require('GameBaseTest')
 
 
 
-contract('GameBase', accounts => {
+contract('GameBase', accounts => { 
 
 
 	const addPlayersInGame = async (gb, count) => {
@@ -89,7 +89,7 @@ contract('GameBase', accounts => {
 
 		await gameBase.setInfoDataTest(10,10,3);
 		await gameBase.setStatusGame(GameStatus('Started'))
-		await et(false, () => gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')), 'Нельзя добавлять гроков после начала игры')
+		await et(false, () => gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')), 'Нельзя добавлять игроков после начала игры')
 
 		await gameBase.setStatusGame(GameStatus('Waiting'))
 		tx = await et(true, () => gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')), 'можно добавлять игроков после начала игры')
@@ -316,7 +316,7 @@ contract('GameBase', accounts => {
 
 	it('Проверка ходов', async () => {
 		const gameBase = await GameBase.new();
-		await gameBase.setInfoDataTest(2,100,3);
+		await gameBase.setInfoDataTest(2000,100,3);
 		await addPlayersInGame(gameBase, 3);
 		let pl, tx;
 
@@ -355,6 +355,7 @@ contract('GameBase', accounts => {
 
 
 		tx = await gameBase.outerStepTest(accounts[1])
+		
 
 		checkEvents(tx, 'StepGame', {
 			target: accounts[2],
@@ -382,17 +383,160 @@ contract('GameBase', accounts => {
 		assert.equal(pl.status, 'Waiting', 'правильный статус игрока, сделавшего ход [outerStep()]');
 		assert.equal(pl.steps, 1, 'Правильное количество ходов игрока, сделавшего ход [outerStep()]');
 
+		const pl2Steps = pl.steps;
+
 		pl = await getPlayer(gameBase, accounts[0]);
 		assert.equal(pl.status, 'Next', 'правильный статус игрока, указанного следующим [outerStep()]');
 
+		const pl0Steps = pl.steps
+
+		tx = await gameBase.innerStepTest(accounts[2], accounts[1]); 
+
+		checkEvents(tx, 'StepGame', {
+			target: accounts[2],
+			next: accounts[1]
+		})
+
+
+		pl = await getPlayer(gameBase, accounts[2]);
+		
+		assert.equal(pl.status, 'Waiting', 'правильный статус игрока, сделавшего ход [innerStep()]');
+		assert.equal(pl.steps, pl2Steps + 1, 'Правильное количество ходов игрока, сделавшего ход [innerStep()]');
+
+		pl = await getPlayer(gameBase, accounts[1]);
+		assert.equal(pl.status, 'Next', 'правильный статус игрока, указанного следующим [innerStep()]');
+
+		pl = await getPlayer(gameBase, accounts[0]);
+		
+		assert.equal(pl.status, 'Waiting', 'правильный статус игрока, пропустившего ход [innerStep()]');
+		assert.equal(pl.steps, pl0Steps, 'Правильное количество ходов игрока, пропустившего ход [innerStep()]');
 	})
 
-	it('Проверка допустимых интевалов при подтверждении', async () => {
+	it('Переход хода', async () => {
 		const gameBase = await GameBase.new();
-		await gameBase.setInfoDataTest(2,100,3);
-		await addPlayersInGame(gameBase, 3);
+		await gameBase.setInfoDataTest(200,100,8);
+		await addPlayersInGame(gameBase, 8);
+
+		await et(false, ()=>gameBase.changeNextPlayer(accounts[0]),'Нельзя использовать переход хода до старта игры')
+		await et(false, ()=>gameBase.changeNextPlayer(),'Нельзя использовать переход хода до старта игры')
+
+		await gameBase.startGameTestEmpty();
+
+		await et(false, ()=>gameBase.changeNextPlayer(accounts[9]),'Нельзя использовать переход хода с указанием не учавствующего игрока')
+
+		let pl, tx, time, eto, np;
+		
+		tx = await gameBase.outerStepTestEmpty();
+		time = tx.logs[0].args.time.toNumber();
+		np = await gameBase.nextStepPlayer();
+		eto = await gameBase.endpointTime();
+
+		assert.equal(np, accounts[1], 'Следующий игрок указан правильно [1]');
+		assert.equal(eto.toNumber(), time + 200, 'Допустимое время следующего хода указанно правильно [1]');
+
+		tx = await et(true, ()=>gameBase.changeNextPlayerTest(accounts[3]),'Можно сменить угрока')
+
+		checkEvents(tx,'ChangeNextPlayer',1,{
+			target: accounts[3],
+			prev: accounts[1]
+		})
+
+		time = tx.logs[0].args.time.toNumber();
+		np = await gameBase.nextStepPlayer();
+		eto = await gameBase.endpointTime();
+
+		assert.equal(np, accounts[3], 'Следующий игрок указан правильно при смене игрока');
+		assert.equal(eto.toNumber(), time + 200, 'Допустимое время следующего хода указанно правильно при смене игрока');
+
+		tx = await gameBase.outerStepTestEmpty();
+		checkEvents(tx, 'StepGame', {
+			target: accounts[3],
+			next: accounts[4]
+		})
+		time = tx.logs[0].args.time.toNumber();
+		np = await gameBase.nextStepPlayer();
+		eto = await gameBase.endpointTime();
+
+		assert.equal(np, accounts[4], 'Следующий игрок указан правильно [2]');
+		assert.equal(eto.toNumber(), time + 200, 'Допустимое время следующего хода указанно правильно [2]');
+
+
+
+
+		tx = await gameBase.changeNextPlayerTestEmpty()
+
+		checkEvents(tx,'ChangeNextPlayer',1,{
+			target: accounts[5],
+			prev: accounts[4]
+		})
+
+		time = tx.logs[0].args.time.toNumber();
+		np = await gameBase.nextStepPlayer();
+		eto = await gameBase.endpointTime();
+
+		assert.equal(np, accounts[5], 'Следующий игрок указан правильно при переходе хода');
+		assert.equal(eto.toNumber(), time + 200, 'Допустимое время следующего хода указанно правильно при переходе хода');
+
+
+		tx = await gameBase.outerStepTestEmpty();
+		checkEvents(tx, 'StepGame', {
+			target: accounts[5],
+			next: accounts[6]
+		})
+		time = tx.logs[0].args.time.toNumber();
+		np = await gameBase.nextStepPlayer();
+		eto = await gameBase.endpointTime();
+
+		assert.equal(np, accounts[6], 'Следующий игрок указан правильно [3]');
+		assert.equal(eto.toNumber(), time + 200, 'Допустимое время следующего хода указанно правильно [3]');
+
+	});
+
+	it('Проверка допустимых интевалов при осуществлении хода в игре', async () => {
+		const timeOut = 3
+		const to = timeOut * 1000;
+		const gameBase = await GameBase.new();
+		await gameBase.setInfoDataTest(timeOut,100,5);
+		await addPlayersInGame(gameBase, 5);
 		await gameBase.startGameTestEmpty();
 		let pl, tx;
+
+		const step = async (status, num) => {
+			let plStepsPrev, plStepsNext, txs, pp, np, eto, time;
+			pp = await gameBase.nextStepPlayer();
+			plStepsPrev = await getPlayer(gameBase, pp);
+			plStepsPrev = plStepsPrev.steps;
+			txs = await et(true, ()=>gameBase.outerStepTestEmpty(), `${status ? 'Можно сделать ход' : 'Нельзя сделать ход'} [${num}]`);
+			np = await gameBase.nextStepPlayer();
+			eto = await gameBase.endpointTime();
+			plStepsNext = await getPlayer(gameBase, pp);
+			plStepsNext = plStepsNext.steps;
+
+			checkEvents(txs, (status ? 'StepGame' : 'TransitionSpeed'), 1, {
+				target: pp,
+				next: np
+			})
+			time = txs.logs[0].args.time.toNumber()
+
+			assert.equal(eto.toNumber(), time + timeOut, `Допустимое время следующего хода указанно правильно [${num}]`);
+			assert.equal(plStepsNext, status ? plStepsPrev + 1 : plStepsPrev, `Количество ходов совпадает [${num}]`);
+			return txs;
+		}
+		
+		await step(true, 1)
+		await sleep(50)
+		await step(true, 2)
+
+		
+		await sleep(to)
+		tx = await step(false, 3)
+
+
+		await sleep(to/2)
+		await step(true, 4)
+
+		await sleep(to*2);
+		await step(false, 5);
 		
 	});
 

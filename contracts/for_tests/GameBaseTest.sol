@@ -33,7 +33,7 @@ contract GameBaseTest is GameBase {
 
 	function removePlayerTest(address pl, PlayerMoveReason reason) public {
 		removePlayer(pl, reason);
-	}
+	} 
 	function innerStepTest(address pl, address plNext) public {
 		innerStep(pl, plNext);
 	}
@@ -42,6 +42,14 @@ contract GameBaseTest is GameBase {
 	}
 	function outerStepTest(address pl) public {
 		outerStep(pl);
+	}
+
+	function changeNextPlayerTest(address pl) public {
+		changeNextPlayer(pl);
+	}
+
+	function changeNextPlayerTestEmpty() public {
+		changeNextPlayer();
 	}
 	
 	function setHostTest(address pl) public {

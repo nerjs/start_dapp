@@ -57,9 +57,10 @@ contract GameBase {
 	event RemovePlayer(address pl, PlayerMoveReason reason);
 	event ConfirmPlayer(address pl);
 	event SetHost(address player);
-	event TransitionSpeed(address target, address next);
+	event TransitionSpeed(address target, address next, uint time);
 	event StartGame(uint time, address firstStep);
-	event StepGame(address target, address next);
+	event StepGame(address target, address next, uint time);
+	event ChangeNextPlayer(address target, address prev, uint time);
 	event EndGame(uint time, address winner, uint playerSteps, uint steps);
 
 	
@@ -135,10 +136,11 @@ contract GameBase {
 
 
 	function checkPlayerStep() public onlyStarted returns(bool) {
-		if (endpointTime < now) return true;
+		if (endpointTime > now) return true;
 		address prev = nextStepPlayer;
 		nextStepPlayer = listPlayers.next(prev, true);
-		emit TransitionSpeed(prev, nextStepPlayer);
+		endpointTime = now + timeOut;
+		emit TransitionSpeed(prev, nextStepPlayer, now);
 		return false;
 	}
 
@@ -222,6 +224,7 @@ contract GameBase {
 	function startGame(address firstStep) internal onlyReady onlyPlayerFor(firstStep, true) {
 		require(firstStep != address(0), "Первый игрок обязателен");
 		timeStartGame = now;
+		endpointTime = now + timeOut;
 		statusGame = GameStatus.Started;
 		nextStepPlayer = firstStep;
 		infoPlayers[firstStep].status = PlayerStatus.Next;
@@ -231,7 +234,7 @@ contract GameBase {
 	function startGame() internal {
 		startGame(listPlayers[0]);
 	}
-
+ 
 
 	function innerStep(address pl, address plNext) internal onlyStarted onlyPlayerFor(pl, true) onlyPlayerFor(plNext, true) {
 		infoPlayers[pl].status = PlayerStatus.Waiting;
@@ -242,8 +245,9 @@ contract GameBase {
 		prevStepPlayer = pl; 
 		nextStepPlayer = plNext; 
 		infoPlayers[nextStepPlayer].status = PlayerStatus.Next;
+		endpointTime = now + timeOut;
 		
-		emit StepGame(pl, nextStepPlayer);
+		emit StepGame(pl, nextStepPlayer, now);
 	}
 
 	function outerStep(address pl) internal onlyStarted onlyPlayerFor(pl, true) {
@@ -255,6 +259,19 @@ contract GameBase {
 
 	function outerStep() internal {
 		outerStep(nextStepPlayer);
+	}
+
+	function changeNextPlayer(address pl) internal onlyStarted() onlyPlayerFor(pl, true) {
+		address prev = nextStepPlayer;
+		nextStepPlayer = pl;
+		endpointTime = now + timeOut;
+		emit ChangeNextPlayer(pl, prev, now);
+	}
+
+
+	function changeNextPlayer() internal {
+		address pl = listPlayers.next(nextStepPlayer, true);
+		changeNextPlayer(pl);
 	}
 
 	function innerWin(address pl) internal onlyStarted  onlyPlayerFor(pl, true) {
