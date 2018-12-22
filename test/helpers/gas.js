@@ -57,7 +57,7 @@ class CheckGas {
 		})
 
 		if (max.name) {
-			console.log('max: '.green, max.name.cyan, ' ', `${max.gas}`.yellow)
+			console.log('    max: '.green, max.name.cyan, ' ', `${max.gas}`.yellow)
 		}
 	}
 
