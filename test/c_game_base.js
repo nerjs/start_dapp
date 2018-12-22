@@ -621,9 +621,77 @@ contract('GameBase', accounts => {
 
 	})
 	
-	it('Проверка доступности по статусу игры', async () => {
-		const gameBase = await GameBase.deployed();
+	it('Проверка модификаторов', async () => {
+		const gameBase = await GameBase.new();
+		await gameBase.setInfoDataTest(10,100,3);
+		await gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate'))
+		await gameBase.addPlayerTest(accounts[1], PlayerMoveReason('GameCreate'))
+		await gameBase.addPlayerTest(accounts[2], PlayerMoveReason('GameCreate'))
+		await gameBase.confirmPlayerTest(accounts[0])
+		await gameBase.confirmPlayerTest(accounts[1])
+		await gameBase.setHostTest(accounts[0])
+
+		// onlyHost
+		await et(false, () => gameBase.testOnlyHost({from: accounts[1]}), '[onlyHost] Нельзя получить доступ от имени игрока не являющегося хостом')
+		await et(true, () => gameBase.testOnlyHost({from: accounts[0]}), '[onlyHost] Можно получить доступ от имени игрока являющегося хостом')
+
+		// onlyPlayer
+		await et(false, () => gameBase.testOnlyPlayer({from: accounts[3]}), '[onlyPlayer] Нельзя получить доступ не от имени игрока')
+		await et(true, () => gameBase.testOnlyPlayer({from: accounts[0]}), '[onlyPlayer] Можно получить доступ от имени игрока')
+
+
+		// onlyPlayerFor
+		await et(false, () => gameBase.testOnlyPlayerFor(accounts[3], true), '[onlyPlayerFor] Нельзя получить доступ не от имени игрока [1]')
+		await et(false, () => gameBase.testOnlyPlayerFor(accounts[3], false), '[onlyPlayerFor] Нельзя получить доступ не от имени игрока [2]')
+		await et(true, () => gameBase.testOnlyPlayerFor(accounts[1], true), '[onlyPlayerFor] Можно получить доступ от имени игрока [1]')
+		await et(true, () => gameBase.testOnlyPlayerFor(accounts[1], false), '[onlyPlayerFor] Можно получить доступ от имени игрока [2]')
+		await et(true, () => gameBase.testOnlyPlayerFor(accounts[2], false), '[onlyPlayerFor] Можно получить доступ от имени не подтвержденного игрока')
+		await et(false, () => gameBase.testOnlyPlayerFor(accounts[2], true), '[onlyPlayerFor] Нельзя получить доступ от имени не подтвержденного игрока')
+
+
+		// onlyStarted onlyNotStarted onlyWaitingPlayers onlyEnded onlyReady
+
+		await gameBase.confirmPlayerTest(accounts[2])
+
+		await gameBase.setStatusGame(GameStatus('Waiting'))
+		await et(false, () => gameBase.testOnlyStarted(), '[onlyStarted] Нельзя получить доступ при статусе игры - Waiting')
+		await et(true, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Можно получить доступ при статусе игры - Waiting')
+		await et(false, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Нельзя получить доступ при статусе игры - Waiting')
+		await et(false, () => gameBase.testOnlyEnded(), '[onlyEnded] Нельзя получить доступ при статусе игры - Waiting')
+		await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при статусе игры - Waiting')
+
+		await gameBase.setStatusGame(GameStatus('WaitingPlayers'))
+		await et(false, () => gameBase.testOnlyStarted(), '[onlyStarted] Нельзя получить доступ при статусе игры - WaitingPlayers')
+		await et(true, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Можно получить доступ при статусе игры - WaitingPlayers')
+		await et(true, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Можно получить доступ при статусе игры - WaitingPlayers')
+		await et(false, () => gameBase.testOnlyEnded(), '[onlyEnded] Нельзя получить доступ при статусе игры - WaitingPlayers')
+		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при статусе игры - WaitingPlayers')
+
 		await gameBase.setStatusGame(GameStatus('Started'))
-		await et(false, ()=>gameBase.outerStepTest(), '[ outerStep ] Недоступен до старта игры');
+		await et(true, () => gameBase.testOnlyStarted(), '[onlyStarted] Можно получить доступ при статусе игры - Started')
+		await et(false, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Нельзя получить доступ при статусе игры - Started')
+		await et(false, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Нельзя получить доступ при статусе игры - Started')
+		await et(false, () => gameBase.testOnlyEnded(), '[onlyEnded] Нельзя получить доступ при статусе игры - Started')
+		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при статусе игры - Started')
+
+		await gameBase.setStatusGame(GameStatus('Ended'))
+		await et(false, () => gameBase.testOnlyStarted(), '[onlyStarted] Нельзя получить доступ при статусе игры - Ended')
+		await et(false, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Нельзя получить доступ при статусе игры - Ended')
+		await et(false, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Нельзя получить доступ при статусе игры - Ended')
+		await et(true, () => gameBase.testOnlyEnded(), '[onlyEnded] Можно получить доступ при статусе игры - Ended')
+		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при статусе игры - Ended')
+
+		// onlyReady
+		await gameBase.setStatusGame(GameStatus('Waiting'))
+
+
+		await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при полном списке игроков [1]')
+		await gameBase.setInfoDataTest(10,100,4);
+		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при не полном списке игроков')
+		await gameBase.addPlayerTest(accounts[3], PlayerMoveReason('GameCreate'))
+		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при не всех подтвержденных игроках')
+		await gameBase.confirmPlayerTest(accounts[3])
+		await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при полном списке игроков [2]')
+
 	});
 })

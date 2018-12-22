@@ -4,11 +4,45 @@ import "../base/GameBase.sol";
 
 
 contract GameBaseTest is GameBase {
+
+	// модификаторы
+
 	uint private __hostModifTest;
 
-	function onlyHostTest() public onlyHost {
+	function testOnlyHost() public onlyHost {
 		__hostModifTest = now;
 	}
+
+	function testOnlyPlayer() public onlyPlayer {
+		__hostModifTest = now;
+	}
+
+	function testOnlyPlayerFor(address pl, bool inGame) public onlyPlayerFor(pl, inGame) {
+		__hostModifTest = now;
+	}
+
+	function testOnlyStarted() public onlyStarted {
+		__hostModifTest = now;
+	}
+
+	function testOnlyNotStarted() public onlyNotStarted {
+		__hostModifTest = now;
+	}
+
+	function testOnlyWaitingPlayers() public onlyWaitingPlayers {
+		__hostModifTest = now;
+	}
+
+	function testOnlyEnded() public onlyEnded {
+		__hostModifTest = now;
+	}
+
+	function testOnlyReady() public onlyReady {
+		__hostModifTest = now;
+	}
+
+
+	// методы
 
 	function setInfoDataTest(uint _timeOut, uint _confirmTimeOut, uint _maxPlayers) public {
 		setInfoData(_timeOut, _confirmTimeOut, _maxPlayers);
@@ -70,4 +104,5 @@ contract GameBaseTest is GameBase {
 	function outerWinTest() public {
 		outerWin();
 	}
+
 }

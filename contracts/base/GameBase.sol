@@ -86,6 +86,11 @@ contract GameBase {
 		require(infoPlayers[msg.sender].host, "Доступ запрещен всем, кроме хоста"); 
 		_; 
 	} 
+	
+	modifier onlyPlayer() {
+		require(infoPlayers[msg.sender].status != PlayerStatus.Empty, "Действие разрешено только игрокам");
+		_;
+	}
 
 	modifier onlyPlayerFor(address pl, bool inGame) {
 		require(listPlayers.indexOf(pl) != uint(-1), "Действие разрешено только относительно игроков");
@@ -95,10 +100,6 @@ contract GameBase {
 		_;
 	}
 
-	modifier onlyPlayer() {
-		require(infoPlayers[msg.sender].status != PlayerStatus.Empty, "Действие разрешено только игрокам");
-		_;
-	}
 
 	modifier onlyStarted() { 
 		require(statusGame == GameStatus.Started, "Действие возможно только для идущей игры"); 
