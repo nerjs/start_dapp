@@ -5,6 +5,7 @@ const list = require('./helpers/list')
 const checkEvents = require('./helpers/check_events')
 const { sleep, TimePoint, toSec, equalTime } = require('./helpers/time')
 const { PlayerInfo, PlayerStatus, PlayerMoveReason, GameStatus } = require('./helpers/game')
+const CheckGas = require('./helpers/gas')
 
 
 const GameBase = artifacts.require('GameBaseTest')
@@ -16,13 +17,17 @@ const GameBase = artifacts.require('GameBaseTest')
 
 contract('GameBase', accounts => { 
 
+	const checkGas = new CheckGas();
 
 	const addPlayersInGame = async (gb, count) => {
 		const arr = accounts.filter((a,i)=> (i < count))
+		let txs;
 
-		await Promise.all(arr.map(addr => gb.addPlayerTest(addr, PlayerMoveReason('GameCreate'))))
+		txs = await Promise.all(arr.map(addr => gb.addPlayerTest(addr, PlayerMoveReason('GameCreate'))))
+		txs.forEach(tx => checkGas.save('addPlayer', tx))
 
-		await Promise.all(arr.map(addr => gb.confirmPlayerTest(addr)));
+		txs = await Promise.all(arr.map(addr => gb.confirmPlayerTest(addr)));
+		txs.forEach(tx => checkGas.save('addPlayer', tx))
 
 		return arr;
 	}
@@ -66,11 +71,14 @@ contract('GameBase', accounts => {
 		const emptyStruct = new PlayerInfo(false, address.ADDRESS, 0, 0, 0, 0)
 		assert(struct.equal(emptyStruct), 'Пустая структура необходимого формата')
 		
-		let t, ct, mp, t1, ct1, mp1;
+		let t, ct, mp, t1, ct1, mp1, tx;
 		t = await gameBase.timeOut()
 		ct = await gameBase.confirmTimeOut()
 		mp = await gameBase.maxPlayers()
-		await gameBase.setInfoDataTest(t.toNumber() + 10, ct.toNumber() + 10, mp.toNumber() + 10)
+		tx = await gameBase.setInfoDataTest(t.toNumber() + 10, ct.toNumber() + 10, mp.toNumber() + 10)
+
+		checkGas.save('setInfoData',tx)
+
 		t1 = await gameBase.timeOut()
 		ct1 = await gameBase.confirmTimeOut()
 		mp1 = await gameBase.maxPlayers()
@@ -94,6 +102,8 @@ contract('GameBase', accounts => {
 		await gameBase.setStatusGame(GameStatus('Waiting'))
 		tx = await et(true, () => gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')), 'можно добавлять игроков после начала игры')
 
+		checkGas.save('addPlayer', tx)
+
 		pls = await gameBase.getPlayersList();
 		list.inList(pls, accounts[0], 'first addPlayer');
 		pl = await gameBase.infoPlayers(accounts[0])
@@ -109,12 +119,18 @@ contract('GameBase', accounts => {
 			reason: PlayerMoveReason('GameCreate')
 		})
 
-		await gameBase.setHostTest(accounts[0])
+		tx = await gameBase.setHostTest(accounts[0])
+
+		checkGas.save('setHost',tx)
+
 		pl = await gameBase.infoPlayers(accounts[0])
 		pl = PlayerInfo(pl)
 		assert.equal(pl.host, true, 'Значение host у игрока после setHost');
 
-		await gameBase.addPlayerTest(accounts[1], PlayerMoveReason('HostAdded'))
+		tx = await gameBase.addPlayerTest(accounts[1], PlayerMoveReason('HostAdded'))
+
+		checkGas.save('addPlayer', tx)
+
 		pl = await gameBase.infoPlayers(accounts[1])
 		pl = PlayerInfo(pl)
 		assert.equal(pl.reason, 'HostAdded', 'Значение reason у второго игрока');
@@ -124,7 +140,10 @@ contract('GameBase', accounts => {
 		await et(false, () => gameBase.addPlayerTest(accounts[1], PlayerMoveReason('GameCreate')), 'Этот игрок уде добавлен')
 
 
-		await gameBase.addPlayerTest(accounts[2], PlayerMoveReason('SelfAdded'))
+		tx = await gameBase.addPlayerTest(accounts[2], PlayerMoveReason('SelfAdded'))
+
+		checkGas.save('addPlayer',tx)
+		
 		pl = await gameBase.infoPlayers(accounts[2])
 		pl = PlayerInfo(pl)
 		assert.equal(pl.reason, 'SelfAdded', 'Значение reason у третьего игрока');
@@ -148,6 +167,8 @@ contract('GameBase', accounts => {
 
 		list.inList(plx, accounts[0], `${accounts[0]} в списке`)
 		tx = await et(true, ()=>gameBase.removePlayerTest(accounts[0], PlayerMoveReason('SelfRemoved')),'Можно удалить добавленного пользователя')
+
+		checkGas.save('removePlayer',tx)
 
 		plx = await gameBase.getPlayersList();
 		assert.equal(plx.length, 2, 'После первого удаления массив уменьшен');
@@ -190,11 +211,14 @@ contract('GameBase', accounts => {
 		await et(false, ()=>gameBase.confirmPlayerTest(accounts[1]),'Нельзя подвердить не добавленного игрока')
 		tx = await et(true, ()=>gameBase.confirmPlayerTest(accounts[0]),'Можно подвердить добавленного игрока') 
 
+		checkGas.save('confirmPlayer', tx)
+
 		checkEvents(tx, 'ConfirmPlayer', 1, {
 			pl: accounts[0]
 		});
 
-		await gameBase.removePlayerTest(accounts[0], PlayerMoveReason('SelfRemoved'))
+		tx = await gameBase.removePlayerTest(accounts[0], PlayerMoveReason('SelfRemoved'))
+		checkGas.save('removePlayer', tx)
 	})
 
 	it('Проверка допустимых интевалов при подтверждении', async () => {
@@ -202,7 +226,8 @@ contract('GameBase', accounts => {
 		let plx, tx, t = 2;
 
 		
-		await gameBase.setInfoDataTest(10,t,10);
+		tx = await gameBase.setInfoDataTest(10,t,10);
+		checkGas.save('setInfoData', tx)
 
 		await Promise.all([
 			gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate')),
@@ -214,6 +239,7 @@ contract('GameBase', accounts => {
 		
 		tx = await et(true, ()=>gameBase.confirmPlayerTest(accounts[0]), `В течении ${t}sec возможно подтвердить участие`)
 
+		checkGas.save('confirmPlayer', tx)
 		checkEvents(tx, 'ConfirmPlayer', 1)
 
 		await sleep(t*1500);
@@ -226,6 +252,7 @@ contract('GameBase', accounts => {
 				
 		tx = await gameBase.checkPlayersGame()
 		
+		checkGas.save('checkPlayersGame', tx)
 		checkEvents(tx, 'RemovePlayer', 1, {
 			pl: accounts[1],
 			reason: PlayerMoveReason('WaitTime')
@@ -243,7 +270,8 @@ contract('GameBase', accounts => {
 		const gameBase = await GameBase.deployed();
 		let tx, t = 2, np, sg, tsg, time;
 		
-		await gameBase.setInfoDataTest(10,t,2);
+		tx = await gameBase.setInfoDataTest(10,t,2);
+		checkGas.save('setInfoData', tx)
 
 		await et(false, ()=>gameBase.startGameTest(accounts[0]),'Нельзя запустить игру без всех участников')
 		
@@ -272,6 +300,7 @@ contract('GameBase', accounts => {
 		time = new TimePoint();
 		tx = await et(true, ()=>gameBase.startGameTest(accounts[1]),'Можно стартовать игру с правильным адресом')
 
+		checkGas.save('startGame', tx)
 		checkEvents(tx, 'StartGame', 1, {
 			firstStep: accounts[1]
 		})
@@ -299,6 +328,7 @@ contract('GameBase', accounts => {
 		time = new TimePoint();
 		tx = await et(true, ()=>gameBase2.startGameTestEmpty(),'Можно стартовать игру без указания адреса')
 
+		checkGas.save('startGame', tx, 'empty')
 		checkEvents(tx, 'StartGame', 1, {
 			firstStep: accounts[0]
 		})
@@ -341,6 +371,7 @@ contract('GameBase', accounts => {
 		all = await gameBase.allSteps()
 		tx = await et(true, ()=>gameBase.innerStepTest(accounts[1], accounts[2]), 'Можно сделать ход')
 
+		checkGas.save('innerStep', tx)
 		checkEvents(tx, 'StepGame', {
 			target: accounts[1],
 			next: accounts[2]
@@ -362,7 +393,7 @@ contract('GameBase', accounts => {
 
 		tx = await gameBase.outerStepTest(accounts[1])
 		
-
+		checkGas.save('outerStep', tx)
 		checkEvents(tx, 'StepGame', {
 			target: accounts[2],
 			next: accounts[1]
@@ -378,6 +409,7 @@ contract('GameBase', accounts => {
 
 		tx = await gameBase.outerStepTestEmpty(); 
 
+		checkGas.save('outerStep', tx, 'empty')
 		checkEvents(tx, 'StepGame', {
 			target: accounts[2],
 			next: accounts[0]
@@ -398,6 +430,7 @@ contract('GameBase', accounts => {
 
 		tx = await gameBase.innerStepTest(accounts[2], accounts[1]); 
 
+		checkGas.save('innerStep', tx)
 		checkEvents(tx, 'StepGame', {
 			target: accounts[2],
 			next: accounts[1]
@@ -420,19 +453,26 @@ contract('GameBase', accounts => {
 
 	it('Переход хода', async () => {
 		const gameBase = await GameBase.new();
+		let tx;
+
 		await gameBase.setInfoDataTest(200,100,8);
 		await addPlayersInGame(gameBase, 8);
 
 		await et(false, ()=>gameBase.changeNextPlayer(accounts[0]),'Нельзя использовать переход хода до старта игры')
 		await et(false, ()=>gameBase.changeNextPlayer(),'Нельзя использовать переход хода до старта игры')
 
-		await gameBase.startGameTestEmpty();
+		tx = await gameBase.startGameTestEmpty();
+
+		checkGas.save('startGame', tx, 'empty')
 
 		await et(false, ()=>gameBase.changeNextPlayer(accounts[9]),'Нельзя использовать переход хода с указанием не учавствующего игрока')
 
-		let pl, tx, time, eto, np;
+		let pl, time, eto, np;
 		
 		tx = await gameBase.outerStepTestEmpty();
+
+		checkGas.save('outerStep', tx, 'empty')
+
 		time = tx.logs[0].args.time.toNumber();
 		np = await gameBase.nextStepPlayer();
 		eto = await gameBase.endpointTime();
@@ -442,6 +482,7 @@ contract('GameBase', accounts => {
 
 		tx = await et(true, ()=>gameBase.changeNextPlayerTest(accounts[3]),'Можно сменить угрока')
 
+		checkGas.save('changeNextPlayer', tx)
 		checkEvents(tx,'ChangeNextPlayer',1,{
 			target: accounts[3],
 			prev: accounts[1]
@@ -455,6 +496,8 @@ contract('GameBase', accounts => {
 		assert.equal(eto.toNumber(), time + 200, 'Допустимое время следующего хода указанно правильно при смене игрока');
 
 		tx = await gameBase.outerStepTestEmpty();
+
+		checkGas.save('outerStep', tx, 'empty')
 		checkEvents(tx, 'StepGame', {
 			target: accounts[3],
 			next: accounts[4]
@@ -471,6 +514,7 @@ contract('GameBase', accounts => {
 
 		tx = await gameBase.changeNextPlayerTestEmpty()
 
+		checkGas.save('changeNextPlayer', tx, 'empty')
 		checkEvents(tx,'ChangeNextPlayer',1,{
 			target: accounts[5],
 			prev: accounts[4]
@@ -485,6 +529,8 @@ contract('GameBase', accounts => {
 
 
 		tx = await gameBase.outerStepTestEmpty();
+
+		checkGas.save('outerStep', tx, 'empty')
 		checkEvents(tx, 'StepGame', {
 			target: accounts[5],
 			next: accounts[6]
@@ -513,6 +559,8 @@ contract('GameBase', accounts => {
 			plStepsPrev = await getPlayer(gameBase, pp);
 			plStepsPrev = plStepsPrev.steps;
 			txs = await et(true, ()=>gameBase.outerStepTestEmpty(), `${status ? 'Можно сделать ход' : 'Нельзя сделать ход'} [${num}]`);
+
+			checkGas.save('outerStep', txs, 'empty')
 			np = await gameBase.nextStepPlayer();
 			eto = await gameBase.endpointTime();
 			plStepsNext = await getPlayer(gameBase, pp);
@@ -578,6 +626,7 @@ contract('GameBase', accounts => {
 		addr = await gameBase.winner()
 		sg = await gameBase.statusGame()
 
+		checkGas.save('innerWin', tx)
 		assert.equal(addr, accounts[1], 'Победитель установлен правильно');
 		assert.equal(GameStatus(sg), 'Ended', 'Статус игры после установки победителя - Ended');
 		
@@ -613,6 +662,7 @@ contract('GameBase', accounts => {
 		tx = await gameBase2.outerWinTest();
 		addr = await gameBase2.winner();
 
+		checkGas.save('outerWin', tx)
 		assert.equal(addr, pl.addr, '[outerWin()] Победителем установлен предидущий игрок');
 
 		checkEvents(tx, 'EndGame', 1, {
@@ -623,6 +673,9 @@ contract('GameBase', accounts => {
 	
 	it('Проверка модификаторов', async () => {
 		const gameBase = await GameBase.new();
+		let tx;
+
+
 		await gameBase.setInfoDataTest(10,100,3);
 		await gameBase.addPlayerTest(accounts[0], PlayerMoveReason('GameCreate'))
 		await gameBase.addPlayerTest(accounts[1], PlayerMoveReason('GameCreate'))
@@ -633,20 +686,30 @@ contract('GameBase', accounts => {
 
 		// onlyHost
 		await et(false, () => gameBase.testOnlyHost({from: accounts[1]}), '[onlyHost] Нельзя получить доступ от имени игрока не являющегося хостом')
-		await et(true, () => gameBase.testOnlyHost({from: accounts[0]}), '[onlyHost] Можно получить доступ от имени игрока являющегося хостом')
+		tx = await et(true, () => gameBase.testOnlyHost({from: accounts[0]}), '[onlyHost] Можно получить доступ от имени игрока являющегося хостом')
+		checkGas.save('onlyHost', tx)
 
 		// onlyPlayer
 		await et(false, () => gameBase.testOnlyPlayer({from: accounts[3]}), '[onlyPlayer] Нельзя получить доступ не от имени игрока')
-		await et(true, () => gameBase.testOnlyPlayer({from: accounts[0]}), '[onlyPlayer] Можно получить доступ от имени игрока')
+		tx = await et(true, () => gameBase.testOnlyPlayer({from: accounts[0]}), '[onlyPlayer] Можно получить доступ от имени игрока')
+		checkGas.save('onlyPlayer', tx)
 
 
 		// onlyPlayerFor
 		await et(false, () => gameBase.testOnlyPlayerFor(accounts[3], true), '[onlyPlayerFor] Нельзя получить доступ не от имени игрока [1]')
 		await et(false, () => gameBase.testOnlyPlayerFor(accounts[3], false), '[onlyPlayerFor] Нельзя получить доступ не от имени игрока [2]')
-		await et(true, () => gameBase.testOnlyPlayerFor(accounts[1], true), '[onlyPlayerFor] Можно получить доступ от имени игрока [1]')
-		await et(true, () => gameBase.testOnlyPlayerFor(accounts[1], false), '[onlyPlayerFor] Можно получить доступ от имени игрока [2]')
-		await et(true, () => gameBase.testOnlyPlayerFor(accounts[2], false), '[onlyPlayerFor] Можно получить доступ от имени не подтвержденного игрока')
+		tx = await et(true, () => gameBase.testOnlyPlayerFor(accounts[1], true), '[onlyPlayerFor] Можно получить доступ от имени игрока [1]')
+		checkGas.save('onlyHost', tx)
+
+		tx = await et(true, () => gameBase.testOnlyPlayerFor(accounts[1], false), '[onlyPlayerFor] Можно получить доступ от имени игрока [2]')
+		checkGas.save('onlyHost', tx)
+
+		tx = await et(true, () => gameBase.testOnlyPlayerFor(accounts[2], false), '[onlyPlayerFor] Можно получить доступ от имени не подтвержденного игрока')
+		checkGas.save('onlyHost', tx)
+
 		await et(false, () => gameBase.testOnlyPlayerFor(accounts[2], true), '[onlyPlayerFor] Нельзя получить доступ от имени не подтвержденного игрока')
+
+
 
 
 		// onlyStarted onlyNotStarted onlyWaitingPlayers onlyEnded onlyReady
@@ -655,20 +718,30 @@ contract('GameBase', accounts => {
 
 		await gameBase.setStatusGame(GameStatus('Waiting'))
 		await et(false, () => gameBase.testOnlyStarted(), '[onlyStarted] Нельзя получить доступ при статусе игры - Waiting')
-		await et(true, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Можно получить доступ при статусе игры - Waiting')
+		tx = await et(true, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Можно получить доступ при статусе игры - Waiting')
+		checkGas.save('onlyNotStarted', tx)
+
 		await et(false, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Нельзя получить доступ при статусе игры - Waiting')
 		await et(false, () => gameBase.testOnlyEnded(), '[onlyEnded] Нельзя получить доступ при статусе игры - Waiting')
 		await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при статусе игры - Waiting')
+		checkGas.save('onlyReady', tx)
+
 
 		await gameBase.setStatusGame(GameStatus('WaitingPlayers'))
 		await et(false, () => gameBase.testOnlyStarted(), '[onlyStarted] Нельзя получить доступ при статусе игры - WaitingPlayers')
-		await et(true, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Можно получить доступ при статусе игры - WaitingPlayers')
+		tx = await et(true, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Можно получить доступ при статусе игры - WaitingPlayers')
+		checkGas.save('onlyNotStarted', tx)
+
 		await et(true, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Можно получить доступ при статусе игры - WaitingPlayers')
+		checkGas.save('onlyWaitingPlayers', tx)
+
 		await et(false, () => gameBase.testOnlyEnded(), '[onlyEnded] Нельзя получить доступ при статусе игры - WaitingPlayers')
 		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при статусе игры - WaitingPlayers')
 
 		await gameBase.setStatusGame(GameStatus('Started'))
-		await et(true, () => gameBase.testOnlyStarted(), '[onlyStarted] Можно получить доступ при статусе игры - Started')
+		tx = await et(true, () => gameBase.testOnlyStarted(), '[onlyStarted] Можно получить доступ при статусе игры - Started')
+		checkGas.save('onlyStarted', tx)
+
 		await et(false, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Нельзя получить доступ при статусе игры - Started')
 		await et(false, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Нельзя получить доступ при статусе игры - Started')
 		await et(false, () => gameBase.testOnlyEnded(), '[onlyEnded] Нельзя получить доступ при статусе игры - Started')
@@ -678,20 +751,30 @@ contract('GameBase', accounts => {
 		await et(false, () => gameBase.testOnlyStarted(), '[onlyStarted] Нельзя получить доступ при статусе игры - Ended')
 		await et(false, () => gameBase.testOnlyNotStarted(), '[onlyNotStarted] Нельзя получить доступ при статусе игры - Ended')
 		await et(false, () => gameBase.testOnlyWaitingPlayers(), '[onlyWaitingPlayers] Нельзя получить доступ при статусе игры - Ended')
-		await et(true, () => gameBase.testOnlyEnded(), '[onlyEnded] Можно получить доступ при статусе игры - Ended')
+		tx = await et(true, () => gameBase.testOnlyEnded(), '[onlyEnded] Можно получить доступ при статусе игры - Ended')
+		checkGas.save('onlyEnded', tx)
+
 		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при статусе игры - Ended')
 
 		// onlyReady
 		await gameBase.setStatusGame(GameStatus('Waiting'))
 
 
-		await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при полном списке игроков [1]')
+		tx = await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при полном списке игроков [1]')
+		checkGas.save('onlyReady', tx)
+
 		await gameBase.setInfoDataTest(10,100,4);
 		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при не полном списке игроков')
 		await gameBase.addPlayerTest(accounts[3], PlayerMoveReason('GameCreate'))
 		await et(false, () => gameBase.testOnlyReady(), '[onlyReady] Нельзя получить доступ при не всех подтвержденных игроках')
 		await gameBase.confirmPlayerTest(accounts[3])
-		await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при полном списке игроков [2]')
+		tx = await et(true, () => gameBase.testOnlyReady(), '[onlyReady] Можно получить доступ при полном списке игроков [2]')
 
+		checkGas.save('onlyReady',tx)
+	});
+
+
+	it('Затраты газа', async () => {
+		checkGas.log()
 	});
 })
