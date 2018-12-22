@@ -246,6 +246,7 @@ contract GameBase {
 		nextStepPlayer = plNext; 
 		infoPlayers[nextStepPlayer].status = PlayerStatus.Next;
 		endpointTime = now + timeOut;
+		allSteps += 1;
 		
 		emit StepGame(pl, nextStepPlayer, now);
 	}
@@ -261,7 +262,7 @@ contract GameBase {
 		outerStep(nextStepPlayer);
 	}
 
-	function changeNextPlayer(address pl) internal onlyStarted() onlyPlayerFor(pl, true) {
+	function changeNextPlayer(address pl) internal onlyStarted onlyPlayerFor(pl, true) {
 		address prev = nextStepPlayer;
 		nextStepPlayer = pl;
 		endpointTime = now + timeOut;

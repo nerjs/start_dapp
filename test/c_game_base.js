@@ -3,7 +3,7 @@ const et = require('./helpers/error_tests')
 const address = require('./helpers/address')
 const list = require('./helpers/list')
 const checkEvents = require('./helpers/check_events')
-const { sleep, TimePoint } = require('./helpers/time')
+const { sleep, TimePoint, toSec, equalTime } = require('./helpers/time')
 const { PlayerInfo, PlayerStatus, PlayerMoveReason, GameStatus } = require('./helpers/game')
 
 
@@ -318,7 +318,8 @@ contract('GameBase', accounts => {
 		const gameBase = await GameBase.new();
 		await gameBase.setInfoDataTest(2000,100,3);
 		await addPlayersInGame(gameBase, 3);
-		let pl, tx;
+		let pl, tx, all, all1;
+
 
 		await et(false, ()=>gameBase.innerStepTest(accounts[0], accounts[1]), 'Нельзя сделать ход до старта игры')
 
@@ -336,6 +337,8 @@ contract('GameBase', accounts => {
 		pl = await getPlayer(gameBase, accounts[2]);
 		assert.equal(pl.status, 'Waiting', 'Правильный статус второго игрока');
 
+
+		all = await gameBase.allSteps()
 		tx = await et(true, ()=>gameBase.innerStepTest(accounts[1], accounts[2]), 'Можно сделать ход')
 
 		checkEvents(tx, 'StepGame', {
@@ -344,8 +347,11 @@ contract('GameBase', accounts => {
 		})
 
 		pl = await getPlayer(gameBase, accounts[1]);
+		all1 = await gameBase.allSteps()
+
 		assert.equal(pl.status, 'Waiting', 'правильный статус игрока, сделавшего ход');
 		assert.equal(pl.steps, 1, 'Правильное количество ходов игрока, сделавшего ход');
+		assert.equal(all1.toNumber(), all.toNumber() + 1, 'Общее количество ходов увеличено');
 
 		pl = await getPlayer(gameBase, accounts[2]);
 		assert.equal(pl.status, 'Next', 'правильный статус игрока, указанного следующим');
@@ -541,7 +547,77 @@ contract('GameBase', accounts => {
 	});
 
 	it('Завершение игры', async () => {
-		const gameBase = await GameBase.deployed();
+		const gameBase = await GameBase.new();
+		await gameBase.setInfoDataTest(10,100,5);
+		await addPlayersInGame(gameBase, 5);
+		
+		await et(false, () => gameBase.innerWinTest(accounts[0]), 'Нельзя записать победу до старта игры')
+
+		await gameBase.startGameTestEmpty();
+		let pl, tx, addr, t1, t2, sg, all;
+
+		await gameBase.outerStepTestEmpty();
+		await gameBase.outerStepTestEmpty();
+		await gameBase.outerStepTestEmpty();
+
+		pl = await getNextPl(gameBase);
+
+		assert.equal(pl.addr, accounts[3], 'Повторная проверка ходов');
+
+		await et(false, () => gameBase.innerWinTest(accounts[6]), 'Победить могут только учавствующие игроки');
+
+		addr = await gameBase.winner()
+		sg = await gameBase.statusGame()
+
+		assert.equal(GameStatus(sg), 'Started', 'Статус игры до установки победителя - Started');
+		assert.equal(addr, address.ADDRESS, 'Победителя нет');
+
+		t1 = toSec(Date.now())
+		tx = await et(true, () => gameBase.innerWinTest(accounts[1]), 'Можно установить игрока после старта игры и из числа играков')
+		t2 = await gameBase.timeEndGame()
+		addr = await gameBase.winner()
+		sg = await gameBase.statusGame()
+
+		assert.equal(addr, accounts[1], 'Победитель установлен правильно');
+		assert.equal(GameStatus(sg), 'Ended', 'Статус игры после установки победителя - Ended');
+		
+		assert(equalTime(t1, t2.toNumber(), 1), 'Время завершения игры установленно правильно')
+
+		all = await gameBase.allSteps();
+
+		checkEvents(tx, 'EndGame', 1, {
+			time: t2.toNumber(),
+			winner: addr,
+			playerSteps: 1,
+			steps: all.toNumber()
+		})
+		
+		await et(false, () => gameBase.innerWinTest(accounts[2]), 'Нельзя установить победителя после окончания игры')
+		
+
+		const gameBase2 = await GameBase.new();
+		await gameBase2.setInfoDataTest(10,100,5);
+		await addPlayersInGame(gameBase2, 5);
+		
+
+		await gameBase2.startGameTestEmpty();
+
+		await gameBase2.outerStepTestEmpty();
+		await gameBase2.outerStepTestEmpty();
+		await gameBase2.outerStepTestEmpty();
+
+		pl = await getPrevPl(gameBase);
+
+		assert.equal(pl.addr, accounts[2], 'Повторная проверка'); 
+
+		tx = await gameBase2.outerWinTest();
+		addr = await gameBase2.winner();
+
+		assert.equal(addr, pl.addr, '[outerWin()] Победителем установлен предидущий игрок');
+
+		checkEvents(tx, 'EndGame', 1, {
+			winner: addr
+		})
 
 	})
 	
