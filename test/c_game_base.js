@@ -777,5 +777,5 @@ contract('GameBase', accounts => {
 
 
 
-	checkGas.it('gameBase')
+	checkGas.it('GameBase')
 })

@@ -305,5 +305,5 @@ contract('AddrArrLibTest', accounts => {
 	}); 
 
 
-	checkGas.it('addrArr')
+	checkGas.it('AddrArrLibTest')
 })

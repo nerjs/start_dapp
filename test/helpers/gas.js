@@ -63,12 +63,13 @@ class CheckGas {
 		}
 	}
 
-	it(ctr) {
+	it(str) {
 		it('Потребление газа', async () => {
-			if (ctr) {
+			if (str) {
 				const td = await TestDeployed.deployed();
-				const tx = await td[ctr]();
-				this.save('deploy', tx)
+				const tx = await td[`${str[0].toLowerCase()}${str.substr(1)}`]();
+				this.save(`deploy ${str}`, tx)
+					
 			}
 			this.log()
 		})

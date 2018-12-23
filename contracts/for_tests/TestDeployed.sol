@@ -5,16 +5,17 @@ import "./AddrArrLibTest.sol";
 
 
 contract TestDeployed {
-	address public test;
+	address[] public test;
 
 	function gameBase() public {
 		GameBase gb = new GameBase();
-		test = address(gb);
+		test.push(address(gb));
 	}
 
-	function addrArr() public {
+	function addrArrLibTest() public {
 		address[] memory arr;
 		AddrArrLibTest gb = new AddrArrLibTest(arr);
-		test = address(gb);
+		test.push(address(gb));
 	}
+
 }
