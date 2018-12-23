@@ -22,10 +22,9 @@ contract GameBase {
 
 
 	/**
-	 *  Статус игрока вне игрового процесса
-	 *	Добавление, удаление, причины
+	 * @title Статус игрока вне игрового процесса
+	 * @dev Добавление, удаление, причины
 	 */
-	
 	enum PlayerMoveReason {
 		GameCreate,   // [ 0 ] Добавлен при создании игры
 		HostAdded,    // [ 1 ] Добавлен хостом
@@ -37,6 +36,9 @@ contract GameBase {
 		BasisPlayers  // [ 7 ] Удален решением игроков
 	}
 
+	/**
+	* @title Статус игры
+	 */
 	enum GameStatus {
 		Waiting,         // [ 0 ] Ожидание начала игры
 		WaitingPlayers,  // [ 1 ] Ожидание игроков
@@ -44,6 +46,9 @@ contract GameBase {
 		Ended            // [ 3 ] Игра закончилась
 	}
 
+	/** 
+	* @title Информация об игроке
+	 */
 	struct PlayerInfo {
 		bool host;                // [ 0 ] является ли первым игроком (на случай, если у первого игрока есть какие либо разширенные права)
 		address addr;             // [ 1 ] аддресс игрока
@@ -53,7 +58,8 @@ contract GameBase {
 		PlayerMoveReason reason;  // [ 5 ] Причина добавления
 	}
 
-	event AddPlayer(address pl, PlayerMoveReason reason, uint cto);
+
+	event AddPlayer(address pl, PlayerMoveReason reason, uint cto); 
 	event RemovePlayer(address pl, PlayerMoveReason reason);
 	event ConfirmPlayer(address pl);
 	event SetHost(address player);
@@ -64,26 +70,26 @@ contract GameBase {
 	event EndGame(uint time, address winner, uint playerSteps, uint steps);
 
 	
-	uint public timeOut;
-	uint public confirmTimeOut;
-	uint public endpointTime;
-	uint public maxPlayers;
-	uint public allSteps;
-	uint public timeStartGame;
-	uint public timeEndGame;
-	address public host;
-	address public winner;
-	address public nextStepPlayer;
-	address public prevStepPlayer;
+	uint public timeOut;           // Допустимая задержка времени между ходами
+	uint public confirmTimeOut;    // Допустимая задержка времени перед подтверждением участия
+	uint public endpointTime;      // Отметка времени, после которой происходит переход хода
+	uint public maxPlayers;        // Максимальное количество игроков
+	uint public allSteps;          // Общее количество игроков
+	uint public timeStartGame;     // Отметка времени - начало игры
+	uint public timeEndGame;       // Отметка времени - конец игры
+	address public host;           // Адресс хоста
+	address public winner;         // Адрес победитиля
+	address public nextStepPlayer; // Адрес игрока, который должен ходить  следующим
+	address public prevStepPlayer; // Адрес игрока, который ходил предидущим
 
-	GameStatus public statusGame;
-	mapping(address => PlayerInfo) public infoPlayers;
-	address[] public listPlayers;
+	GameStatus public statusGame;                       // Статус игры
+	mapping(address => PlayerInfo) public infoPlayers; // Информация об игрока 
+	address[] public listPlayers;                      // Список игроков
 
 
 
 	modifier onlyHost() { 
-		require(infoPlayers[msg.sender].host, "Доступ запрещен всем, кроме хоста"); 
+		require(infoPlayers[msg.sender].host, "Действие запрещено всем, кроме хоста"); 
 		_; 
 	} 
 	
@@ -99,7 +105,6 @@ contract GameBase {
 		}
 		_;
 	}
-
 
 	modifier onlyStarted() { 
 		require(statusGame == GameStatus.Started, "Действие возможно только для идущей игры"); 
@@ -132,7 +137,7 @@ contract GameBase {
 	}
 
 	function inGame(address pl) public view returns(bool) {
-		return ((infoPlayers[pl].status != PlayerStatus.Waiting) && (listPlayers.indexOf(pl) != uint(-1)));
+		return listPlayers.indexOf(pl) != uint(-1);
 	}
 
 
