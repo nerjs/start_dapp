@@ -102,7 +102,7 @@ contract GameBaseTest is GameBase {
 	}
 
 	function outerWinTest() public {
-		outerWin();
+		innerWin();
 	}
 
 }

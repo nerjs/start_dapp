@@ -284,7 +284,7 @@ contract GameBase {
 		emit EndGame(now, pl, infoPlayers[pl].steps, allSteps);
 	} 
 
-	function outerWin() internal onlyStarted {
+	function innerWin() internal {
 		innerWin(prevStepPlayer);
 	}
 
