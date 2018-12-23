@@ -1,5 +1,7 @@
 require('colors')
 
+const TestDeployed = artifacts.require('TestDeployed')
+
 
 class CheckGas {
 	
@@ -61,8 +63,13 @@ class CheckGas {
 		}
 	}
 
-	it() {
+	it(ctr) {
 		it('Потребление газа', async () => {
+			if (ctr) {
+				const td = await TestDeployed.deployed();
+				const tx = await td[ctr]();
+				this.save('deploy', tx)
+			}
 			this.log()
 		})
 	}
