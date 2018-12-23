@@ -9,6 +9,7 @@ const CheckGas = require('./helpers/gas')
 
 
 const GameBase = artifacts.require('GameBaseTest')
+const GameBaseCore = artifacts.require('GameBase')
 
 
 
@@ -51,7 +52,10 @@ contract('GameBase', accounts => {
 
 
 	it('Стартовые данные', async () => {
-		const gameBase = await GameBase.deployed();
+		const gameBase = await GameBase.new();
+		const gameBaseCore = await GameBaseCore.new();
+		checkGas.contract('GameBaseTest', gameBase)
+		checkGas.contract('GameBase', gameBaseCore)
 		await list.startData(gameBase, [
 			{ n: 'timeOut', r: 0 },
 			{ name: 'confirmTimeOut', result: 0 },
@@ -349,7 +353,6 @@ contract('GameBase', accounts => {
 		await gameBase.setInfoDataTest(2000,100,3);
 		await addPlayersInGame(gameBase, 3);
 		let pl, tx, all, all1;
-
 
 		await et(false, ()=>gameBase.innerStepTest(accounts[0], accounts[1]), 'Нельзя сделать ход до старта игры')
 

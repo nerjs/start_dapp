@@ -3,6 +3,7 @@ const lh = require('./helpers/list')
 const address = require('./helpers/address')
 const CheckGas = require('./helpers/gas')
 const AddrArr = artifacts.require('AddrArrLibTest')
+const AddrArrLibTestEmpty = artifacts.require('AddrArrLibTestEmpty')
 
 
 
@@ -39,10 +40,13 @@ contract('AddrArrLibTest', accounts => {
 	it('Проверка тестового контракта', async () => {
 		console.log('library'.blue, 'AddrArr'.yellow, '/libs/AddrArr.sol'.green)
 		const arr = await AddrArr.deployed();
+		const arrC = await AddrArr.new([]);
+		const arrC2 = await AddrArrLibTestEmpty.new();
 		const count = await arr.getCount();
 		const list = await arr.getList();
 
-
+		checkGas.contract('AddrArr', arrC2)
+		checkGas.contract('AddrArrLibTest', arrC)
 		assert.equal(accounts.length, count.toNumber(), 'Количество аддресов совпадает');
 		lh.equal(accounts, list, 'Массивы совпадают')
 	})
@@ -305,5 +309,5 @@ contract('AddrArrLibTest', accounts => {
 	}); 
 
 
-	checkGas.it('AddrArrLibTest')
+	checkGas.it()
 })

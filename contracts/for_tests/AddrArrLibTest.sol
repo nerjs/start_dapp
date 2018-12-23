@@ -81,3 +81,8 @@ contract AddrArrLibTest {
 		return list.prev(item, reload);
 	}
 }
+
+
+contract AddrArrLibTestEmpty {
+	using AddrArr for address[];
+}

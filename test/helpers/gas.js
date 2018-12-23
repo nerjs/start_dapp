@@ -1,13 +1,19 @@
 require('colors')
 
-const TestDeployed = artifacts.require('TestDeployed')
-
+const getTransaction = hash => new Promise((resolve, reject) => {
+	web3.eth.getTransactionReceipt(hash, (err, res) => {
+		if (err) return reject(err);
+		resolve(res)
+	})
+})
 
 class CheckGas {
 	
 	constructor() {
-		this._logs = {}
+		this._logs = {} 
+		this._contracts = {}
 		this.maxLength = 0;
+		this.maxLengthContract = 0;
 	}
 
 	save(method, tx, type) {
@@ -40,6 +46,35 @@ class CheckGas {
 		}
 	}
 
+
+	async contract(name, c) {
+		if (!c) {
+			c = name;
+			name = 'contract'
+		}
+
+		if (name.length > this.maxLengthContract) {
+			this.maxLengthContract = name.length
+		}
+
+		if (typeof c != 'object' || !c.transactionHash) return console.log('contract.transactionHash is NULL'.red)
+		// console.log(web3)
+		const tx = await getTransaction(c.transactionHash)
+		this._contracts[name] = tx.gasUsed
+	}
+
+
+	async start(...arg) {
+		if (arg.length === 0) return console.log('Arguments.length is 0. [CheckGas.start]'.red)
+		let [ name, Contract, ...arr] = arg; 
+		if (!Contract.new || typeof Contract.new !== 'function') return console.log('Contract must have method new'.red) 
+
+		const contract = await Contract.new(...arr);
+		this.contract(name, contract)
+	}
+
+
+
 	log() {
 
 		const max = {}
@@ -61,16 +96,19 @@ class CheckGas {
 		if (max.name) {
 			console.log('    max: '.green, max.name.cyan, ' ', `${max.gas}`.yellow)
 		}
+
+		if (Object.keys(this._contracts).length > 0) {
+			console.log('    -----')
+			Object.keys(this._contracts).forEach( key => {
+				const prefix = (new Array(this.maxLengthContract - key.length + 4)).join(' ')
+				console.log(prefix, ` ${key} `.magentaBG.white, 'gas:'.cyan, `${this._contracts[key]} `.yellow)
+			})
+		}
+
 	}
 
-	it(str) {
+	it() {
 		it('Потребление газа', async () => {
-			if (str) {
-				const td = await TestDeployed.deployed();
-				const tx = await td[`${str[0].toLowerCase()}${str.substr(1)}`]();
-				this.save(`deploy ${str}`, tx)
-					
-			}
 			this.log()
 		})
 	}
