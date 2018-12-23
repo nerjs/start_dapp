@@ -774,7 +774,5 @@ contract('GameBase', accounts => {
 	});
 
 
-	it('Затраты газа', async () => {
-		checkGas.log()
-	});
+	checkGas.it()
 })

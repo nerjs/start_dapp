@@ -61,6 +61,12 @@ class CheckGas {
 		}
 	}
 
+	it() {
+		it('Потребление газа', async () => {
+			this.log()
+		})
+	}
+
 }
 
 

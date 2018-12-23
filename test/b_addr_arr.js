@@ -1,14 +1,19 @@
 require('colors')
 const lh = require('./helpers/list')
 const address = require('./helpers/address')
+const CheckGas = require('./helpers/gas')
 const AddrArr = artifacts.require('AddrArrLibTest')
 
 
 
 contract('AddrArrLibTest', accounts => {
+	const checkGas = new CheckGas()
+
 	const parseList = async (arr, count) => {
 		const _list1 = await arr.getList();
-		await arr.splice(_list1.length - count, count * 2);
+		const tx = await arr.splice(_list1.length - count, count * 2);
+
+		checkGas.save('splice', tx)
 		const list1 = await arr.getList();
 		const list2 = [];
 
@@ -22,7 +27,8 @@ contract('AddrArrLibTest', accounts => {
 	}
 
 	const updateList = async arr => {
-		await arr.splice(0, accounts.length * 2);
+		const tx = await arr.splice(0, accounts.length * 2);
+		checkGas.save('splice', tx)
 		for (let i = 0; i < accounts.length; i++) {
 			await arr.push(accounts[i]);
 		}
@@ -54,7 +60,7 @@ contract('AddrArrLibTest', accounts => {
 	it('Добавление и удаление элементов с конца списка', async () => {
 		const arr = await AddrArr.deployed();
 		const list1 = await arr.getList();
-		let indexOf = [];
+		let indexOf = [], tx;
 		
 		await arr.push(arr.address);
 
@@ -66,8 +72,9 @@ contract('AddrArrLibTest', accounts => {
 		assert(indexOf[0], 'Добавленный аддресс найден в списке [indexOf()]');
 		assert.equal(list1.length, indexOf[1], 'Позиция найденного аддресса совпадает [indexOf()}');
 
-		await arr.pop();
+		tx = await arr.pop();
 
+		checkGas.save('pop', tx)
 		const list3 = await arr.getList();
 		indexOf = await arr.indexOf(arr.address);
 		
@@ -78,13 +85,15 @@ contract('AddrArrLibTest', accounts => {
 
 	it('Удаление со здвигом', async () => {
 		const arr = await AddrArr.deployed();
+		let tx;
 		const list1 = await arr.getList();
 
 		const start = parseInt(list1.length / 4),
 			count = parseInt(list1.length / 3);
 
-		await arr.splice(start, count);
+		tx = await arr.splice(start, count);
 		
+		checkGas.save('splice', tx)
 		const list2 = await arr.getList();
 		const io1 = await arr.indexOf(list1[start])
 		const io2 = await arr.indexOf(list1[start + count - 1])
@@ -101,8 +110,9 @@ contract('AddrArrLibTest', accounts => {
 		})
 
 
-		await arr.splice(list2.length - count, count * 2);
+		tx = await arr.splice(list2.length - count, count * 2);
 
+		checkGas.save('splice', tx)
 		const list3 = await arr.getList();
 
 
@@ -114,8 +124,9 @@ contract('AddrArrLibTest', accounts => {
 			}
 		})
 
-		await arr.splice(0, list1.length);
+		tx = await arr.splice(0, list1.length);
 
+		checkGas.save('splice', tx)
 		const list4 = await arr.getList();
 
 		assert.equal(list4.length, 0, 'Подное удаление списка');
@@ -127,19 +138,24 @@ contract('AddrArrLibTest', accounts => {
 	it('Удаление без сохранения порядка', async () => {
 		const arr = await AddrArr.deployed();
 		const list1 = await arr.getList();
+		let tx;
 		
 		const removeAddr = list1[3],
 			removeId = 5;
 
 
-		await arr.remove(removeAddr);
+		tx = await arr.remove(removeAddr);
+
+		checkGas.save('remove', tx)
 		const list2 = await arr.getList();
 
 		assert.equal(list2.length, list1.length - 1, 'длинна массива уменьшилась [remove()]');
 		assert.equal(list2.indexOf(removeAddr), -1, 'Удаленный элемент не найден в списке [remove()]');
 
 		const removeAddr2 = list2[removeId];
-		await arr.removeIndex(removeId);
+		tx = await arr.removeIndex(removeId);
+
+		checkGas.save('remove', tx)
 		const list3 = await arr.getList();
 
 		assert.equal(list3.length, list2.length - 1, 'длинна массива уменьшилась [removeIndex()]');
@@ -154,7 +170,9 @@ contract('AddrArrLibTest', accounts => {
 		const index = 4;
 
 		
-		await arr.insertItem(index, arr.address)
+		const tx = await arr.insertItem(index, arr.address)
+
+		checkGas.save('insert', tx)
 		const list2 = await arr.getList();
 
 		assert.equal(list2.length, list.length + 1, 'Длинна массива увеличилась на 1');
@@ -167,7 +185,9 @@ contract('AddrArrLibTest', accounts => {
 		const [ list1, list2 ] = await parseList(arr, 4);
 		const start = parseInt(list1.length / 2)
 
-		await arr.insert(start, list2);
+		const tx = await arr.insert(start, list2);
+
+		checkGas.save('insert', tx)
 		const list3 = await arr.getList();
 
 		assert.equal(list3.length, list1.length + list2.length, 'Правильный новый размер массива');
@@ -193,12 +213,18 @@ contract('AddrArrLibTest', accounts => {
 		const [ list1, list2 ] = await parseList(arr, 3)
 		const start1 = list1.length - 2,
 			start2 = list1.length - 5;
-		await arr.replace(start1, arr.address);
+		let tx; 
+
+		tx = await arr.replace(start1, arr.address);
+
+		checkGas.save('replace', tx)
 		const list3 = await arr.getList();
 		assert.equal(list3.length, list1.length, 'Длинна массива, при одиночной вставке, не изменилась');
 		assert.equal(list3[start1], arr.address, 'В необходимой позиции ожидаемый элемент');
 
-		await arr.replaceArr(start2, list2);
+		tx = await arr.replaceArr(start2, list2);
+
+		checkGas.save('replace', tx)
 		const list4 = await arr.getList();
 		assert.equal(list4.length, list1.length, 'Длинна массива, при вставке vfccbdf, не изменилась');
 
@@ -214,7 +240,9 @@ contract('AddrArrLibTest', accounts => {
 		const [list5, list6 ] = await parseList(arr, 5);
 		const start3 = list5.length - 3;
 		
-		await arr.replaceArr(start3, list6);
+		tx = await arr.replaceArr(start3, list6);
+
+		checkGas.save('replace', tx)
 		const list7 = await arr.getList();
 
 		assert.equal(list7.length, start3 + list6.length, 'Длинна массива, при вставке массива, соответствует необходимой длинне');
@@ -232,8 +260,11 @@ contract('AddrArrLibTest', accounts => {
 	it('Добавление у удаление с начала списка', async () => {
 		const arr = await AddrArr.deployed();
 		const list1 = await arr.getList();
+		let tx;
 
-		await arr.shift();
+		tx = await arr.shift();
+
+		checkGas.save('shift', tx)
 		const list2 = await arr.getList();
 
 		assert.equal(list2.length, list1.length - 1, 'Длинна массива после удаления первого элемента уменьшилась на 1');
@@ -241,7 +272,9 @@ contract('AddrArrLibTest', accounts => {
 		list1.shift();
 		assert.equal(JSON.stringify(list2), JSON.stringify(list1), 'Порядок элементов после удаления соответствует');
 
-		await arr.unshift(arr.address);
+		tx = await arr.unshift(arr.address);
+
+		checkGas.save('unshift', tx)
 		const list3 = await arr.getList();
 
 		assert.equal(list3.length, list2.length + 1, 'Длинна массива после добавления первого элемента увеличилась на 1');
@@ -269,5 +302,8 @@ contract('AddrArrLibTest', accounts => {
 		assert.equal(prev1, address.ADDRESS, 'Предидущий от первого слота - пустой слот');
 		assert.equal(prev2, list[0], 'Предидущий от второго слота - первый слот');
 		assert.equal(prev3, list[last], 'Предидущий от первого слота с параметром reload - последний слот');
-	});
+	}); 
+
+
+	checkGas.it()
 })
