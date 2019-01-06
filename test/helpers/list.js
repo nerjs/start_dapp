@@ -60,12 +60,15 @@ exports.startData = async (contract, _arr) => {
 		throw new Error(`Неправильный формат: [index:${i}], [${JSON.stringify(d)}]`)
 	}).map( d => {
 		const pr = contract[(d.n || d.name)]()
-		pr._result = d.r === undefined ? d.result : d.r
+		pr._result = d.r === undefined ? d.result : d.r;
+		pr.name = d.n || d.name;
 		return pr;
 	} )
 
 	const res = await Promise.all(arr);
+	
 	arr.forEach((d, i) => {
 		assert.equal(parseNumber(res[i]), d._result, `Ошибка соответствия. Метод ${d.n || d.name}. [index:${i}]`);
 	})
+	return res;
 }

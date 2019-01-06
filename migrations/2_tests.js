@@ -6,6 +6,7 @@ const AddrArrLibTestEmpty = artifacts.require('AddrArrLibTestEmpty');
 const AddrArr = artifacts.require('AddrArr')
 const GameBaseTest = artifacts.require('GameBaseTest');
 const GameBase = artifacts.require('GameBase');
+const Proxy = artifacts.require('Proxy');
 
 module.exports = (deployer, network, accounts) => {
 
@@ -23,6 +24,13 @@ module.exports = (deployer, network, accounts) => {
 		
 		
 	}
+
+	deployer.deploy(AddrArr);
+	deployer.link(AddrArr, GameBaseTest);
+	deployer.deploy(GameBaseTest).then(gb => {
+		return deployer.deploy(Proxy, gb.address)
+	})
+	
 
 
 };

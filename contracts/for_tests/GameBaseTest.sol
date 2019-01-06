@@ -9,6 +9,9 @@ contract GameBaseTest is GameBase {
 
 	uint private __hostModifTest;
 
+	// function initialize() public {
+	// 	timeOut = 0;
+	// }
 	function testOnlyHost() public onlyHost {
 		__hostModifTest = now;
 	}

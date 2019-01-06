@@ -70,7 +70,7 @@ contract GameBase {
 	event EndGame(uint time, address winner, uint playerSteps, uint steps);
 
 	
-	uint public timeOut;           // Допустимая задержка времени между ходами
+	uint public timeOut = 0;           // Допустимая задержка времени между ходами
 	uint public confirmTimeOut;    // Допустимая задержка времени перед подтверждением участия
 	uint public endpointTime;      // Отметка времени, после которой происходит переход хода
 	uint public maxPlayers;        // Максимальное количество игроков
@@ -135,6 +135,9 @@ contract GameBase {
 		}
 		_;
 	}
+
+
+
 
 	function inGame(address pl) public view returns(bool) {
 		return listPlayers.indexOf(pl) != uint(-1);
