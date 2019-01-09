@@ -6,7 +6,7 @@ const AddrArrLibTestEmpty = artifacts.require('AddrArrLibTestEmpty');
 const AddrArr = artifacts.require('AddrArr')
 const GameBaseTest = artifacts.require('GameBaseTest');
 const GameBase = artifacts.require('GameBase');
-const Proxy = artifacts.require('Proxy');
+const Proxy = artifacts.require('Proxy3');
 
 module.exports = (deployer, network, accounts) => {
 

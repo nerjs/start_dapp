@@ -137,7 +137,9 @@ contract GameBase {
 	}
 
 
-
+	function initialize() public {
+		timeOut = 110;
+	}
 
 	function inGame(address pl) public view returns(bool) {
 		return listPlayers.indexOf(pl) != uint(-1);

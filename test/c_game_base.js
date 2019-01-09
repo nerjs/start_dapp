@@ -14,6 +14,7 @@ const GameBaseCore = artifacts.require('GameBase')
 
 
 
+const contract = () => true;
 
 
 contract('GameBase', accounts => { 

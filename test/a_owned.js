@@ -7,7 +7,7 @@ const SharedOwned = artifacts.require('SharedOwned')
 const OwnedTest = artifacts.require('OwnedTest')
 const Owned = artifacts.require('Owned')
 
-
+const contract = () => true;
 contract('Owned', accounts => {
 	const checkGas = new CheckGas();
 	checkGas.start('OwnedTest',OwnedTest)

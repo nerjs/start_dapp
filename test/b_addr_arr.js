@@ -7,6 +7,7 @@ const AddrArrLibTestEmpty = artifacts.require('AddrArrLibTestEmpty')
 
 
 
+const contract = () => true;
 contract('AddrArrLibTest', accounts => {
 	const checkGas = new CheckGas()
 
